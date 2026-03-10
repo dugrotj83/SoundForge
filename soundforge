@@ -1,0 +1,2230 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SOUNDFORGE — AI Music Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+–bg: #080810;
+–surface: #0e0e1a;
+–surface2: #141425;
+–border: rgba(255,255,255,0.07);
+–border2: rgba(255,255,255,0.12);
+–neon: #00ffe1;
+–neon2: #ff2d78;
+–neon3: #a259ff;
+–gold: #ffd166;
+–text: #eeeef8;
+–muted: #5a5a80;
+–dim: #2a2a40;
+–radius: 14px;
+–font-display: ‘Bebas Neue’, sans-serif;
+–font-body: ‘DM Sans’, sans-serif;
+–font-mono: ‘JetBrains Mono’, monospace;
+}
+
+html, body { height: 100%; }
+
+/* ========== MOBILE (default) ========== */
+body {
+font-family: var(–font-body);
+color: var(–text);
+background: var(–bg);
+overflow-x: hidden;
+}
+
+/* Grain */
+body::before {
+content: ‘’;
+position: fixed; inset: 0;
+background-image: url(“data:image/svg+xml,%3Csvg viewBox=‘0 0 256 256’ xmlns=‘http://www.w3.org/2000/svg’%3E%3Cfilter id=‘noise’%3E%3CfeTurbulence type=‘fractalNoise’ baseFrequency=‘0.9’ numOctaves=‘4’ stitchTiles=‘stitch’/%3E%3C/filter%3E%3Crect width=‘100%25’ height=‘100%25’ filter=‘url(%23noise)’ opacity=‘1’/%3E%3C/svg%3E”);
+opacity: 0.025; pointer-events: none; z-index: 9999;
+}
+
+/* Glowing orbs */
+.orb { position: fixed; border-radius: 50%; pointer-events: none; filter: blur(80px); z-index: 0; }
+.orb1 { width: 400px; height: 400px; background: rgba(0,255,225,0.06); top: -100px; right: -100px; }
+.orb2 { width: 350px; height: 350px; background: rgba(162,89,255,0.06); bottom: 100px; left: -80px; }
+
+/* ── MOBILE LAYOUT ── */
+.app-mobile {
+display: flex;
+flex-direction: column;
+min-height: 100vh;
+padding-bottom: 130px; /* space for player + nav */
+}
+
+/* Mobile header */
+.mobile-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 16px 20px 12px;
+border-bottom: 1px solid var(–border);
+background: var(–surface);
+position: sticky; top: 0; z-index: 50;
+}
+.mobile-logo {
+font-family: var(–font-display);
+font-size: 26px; letter-spacing: 3px;
+color: var(–neon);
+text-shadow: 0 0 16px rgba(0,255,225,0.4);
+}
+.mobile-header-right { display: flex; gap: 10px; align-items: center; }
+.hdr-btn {
+background: var(–surface2); border: 1px solid var(–border2);
+border-radius: 8px; color: var(–muted);
+padding: 8px 12px; cursor: pointer;
+font-family: var(–font-mono); font-size: 11px;
+letter-spacing: 0.08em; text-transform: uppercase;
+display: flex; align-items: center; gap: 6px;
+-webkit-tap-highlight-color: transparent;
+transition: all 0.2s;
+}
+.hdr-btn:active { border-color: var(–neon); color: var(–neon); }
+
+/* Mobile tab bar */
+.mobile-tabs {
+display: flex;
+background: var(–surface);
+border-bottom: 1px solid var(–border);
+padding: 0 20px;
+gap: 0;
+overflow-x: auto;
+scrollbar-width: none;
+}
+.mobile-tabs::-webkit-scrollbar { display: none; }
+.mtab {
+padding: 14px 20px;
+font-family: var(–font-mono); font-size: 11px;
+letter-spacing: 0.1em; text-transform: uppercase;
+color: var(–muted); background: none; border: none;
+cursor: pointer; white-space: nowrap;
+border-bottom: 2px solid transparent;
+transition: all 0.2s;
+-webkit-tap-highlight-color: transparent;
+}
+.mtab.active { color: var(–neon); border-bottom-color: var(–neon); }
+
+/* Tab panels */
+.tab-panel { display: none; padding: 20px; }
+.tab-panel.active { display: flex; flex-direction: column; gap: 20px; }
+
+/* ── STUDIO PANEL ── */
+.studio-hero {
+text-align: center;
+padding: 10px 0 4px;
+}
+.studio-title {
+font-family: var(–font-display);
+font-size: 44px; letter-spacing: 4px; line-height: 0.9;
+background: linear-gradient(135deg, var(–text) 0%, var(–neon) 60%, var(–neon3) 100%);
+-webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.studio-sub {
+font-size: 13px; color: var(–muted); margin-top: 8px;
+font-weight: 300;
+}
+
+/* Mode tabs */
+.mode-row {
+display: flex; gap: 2px;
+background: var(–surface); border: 1px solid var(–border);
+border-radius: 10px; padding: 3px;
+}
+.mode-tab {
+flex: 1; padding: 10px 6px;
+border-radius: 7px; border: none; background: none;
+color: var(–muted); font-family: var(–font-body);
+font-size: 12px; font-weight: 500;
+cursor: pointer; transition: all 0.2s; text-align: center;
+-webkit-tap-highlight-color: transparent;
+}
+.mode-tab.active { background: var(–surface2); color: var(–text); box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+
+/* Prompt box */
+.prompt-card {
+background: var(–surface); border: 1px solid var(–border2);
+border-radius: var(–radius); padding: 18px;
+transition: border-color 0.3s;
+}
+.prompt-card:focus-within { border-color: rgba(0,255,225,0.35); }
+.prompt-label {
+font-family: var(–font-mono); font-size: 10px;
+letter-spacing: 0.15em; text-transform: uppercase;
+color: var(–muted); margin-bottom: 10px;
+display: flex; align-items: center; gap: 8px;
+}
+.prompt-label::after { content: ‘’; flex: 1; height: 1px; background: var(–border); }
+.prompt-input {
+width: 100%; background: none; border: none; outline: none;
+color: var(–text); font-family: var(–font-body);
+font-size: 16px; font-weight: 400; line-height: 1.6;
+resize: none; min-height: 80px;
+}
+.prompt-input::placeholder { color: var(–dim); }
+.prompt-footer {
+display: flex; justify-content: space-between; align-items: center;
+margin-top: 12px; padding-top: 12px;
+border-top: 1px solid var(–border);
+}
+.char-count { font-family: var(–font-mono); font-size: 11px; color: var(–muted); }
+
+/* Tag pills */
+.tag-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag-pill {
+font-family: var(–font-mono); font-size: 11px;
+padding: 6px 12px; border-radius: 100px;
+border: 1px solid var(–border2); color: var(–muted);
+cursor: pointer; transition: all 0.2s; white-space: nowrap;
+background: none; -webkit-tap-highlight-color: transparent;
+}
+.tag-pill.selected, .tag-pill:active {
+border-color: var(–neon); color: var(–neon); background: rgba(0,255,225,0.08);
+}
+
+/* Lyrics panel */
+.lyrics-card {
+background: var(–surface); border: 1px solid var(–border2);
+border-radius: var(–radius); padding: 18px;
+}
+.lyrics-textarea {
+width: 100%; background: none; border: none; outline: none;
+color: var(–text); font-family: var(–font-body);
+font-size: 15px; line-height: 1.6; resize: none; min-height: 120px;
+}
+
+/* Controls grid */
+.controls-grid {
+display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+}
+.control-group { display: flex; flex-direction: column; gap: 8px; }
+.control-label {
+font-family: var(–font-mono); font-size: 10px;
+letter-spacing: 0.12em; text-transform: uppercase; color: var(–muted);
+}
+.control-select {
+background: var(–surface); border: 1px solid var(–border2);
+border-radius: 10px; color: var(–text);
+font-family: var(–font-body); font-size: 15px;
+padding: 13px 14px; outline: none; cursor: pointer;
+appearance: none; width: 100%;
+background-image: url(“data:image/svg+xml,%3Csvg width=‘12’ height=‘8’ viewBox=‘0 0 12 8’ fill=‘none’ xmlns=‘http://www.w3.org/2000/svg’%3E%3Cpath d=‘M1 1L6 7L11 1’ stroke=’%235a5a80’ stroke-width=‘1.5’ stroke-linecap=‘round’ stroke-linejoin=‘round’/%3E%3C/svg%3E”);
+background-repeat: no-repeat; background-position: right 12px center;
+-webkit-tap-highlight-color: transparent;
+}
+.control-select option { background: var(–surface2); }
+.bpm-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.control-slider {
+-webkit-appearance: none; width: 100%; height: 6px;
+background: var(–dim); border-radius: 100px; outline: none; cursor: pointer;
+}
+.control-slider::-webkit-slider-thumb {
+-webkit-appearance: none; width: 24px; height: 24px;
+border-radius: 50%; background: var(–neon);
+box-shadow: 0 0 10px rgba(0,255,225,0.5); cursor: pointer;
+}
+
+/* Duration row */
+.duration-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.dur-label { font-family: var(–font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(–muted); width: 100%; margin-bottom: 2px; }
+
+/* Generate button */
+.forge-btn {
+width: 100%; padding: 18px;
+border-radius: var(–radius); border: none;
+background: var(–neon); color: #000;
+font-family: var(–font-display); font-size: 24px;
+letter-spacing: 4px; cursor: pointer;
+box-shadow: 0 0 30px rgba(0,255,225,0.3);
+transition: all 0.2s; position: relative; overflow: hidden;
+-webkit-tap-highlight-color: transparent;
+}
+.forge-btn:active { transform: scale(0.97); box-shadow: 0 0 20px rgba(0,255,225,0.2); }
+.forge-btn:disabled { background: var(–dim); color: var(–muted); cursor: not-allowed; box-shadow: none; }
+
+/* Generation status */
+.gen-status {
+display: none; background: var(–surface);
+border: 1px solid var(–border); border-radius: var(–radius);
+padding: 20px; flex-direction: column; gap: 16px;
+}
+.gen-status.visible { display: flex; }
+.status-anim { display: flex; align-items: center; gap: 3px; height: 36px; justify-content: center; }
+.sw-bar { width: 3px; border-radius: 2px; background: var(–neon); animation: wave 0.8s ease-in-out infinite alternate; }
+.sw-bar:nth-child(1){animation-delay:0s;height:16px}.sw-bar:nth-child(2){animation-delay:.1s;height:28px}.sw-bar:nth-child(3){animation-delay:.2s;height:22px}.sw-bar:nth-child(4){animation-delay:.3s;height:36px}.sw-bar:nth-child(5){animation-delay:.4s;height:18px}.sw-bar:nth-child(6){animation-delay:.5s;height:30px}.sw-bar:nth-child(7){animation-delay:.3s;height:14px}.sw-bar:nth-child(8){animation-delay:.1s;height:26px}
+@keyframes wave { from{transform:scaleY(0.2);opacity:0.4} to{transform:scaleY(1);opacity:1} }
+.status-label { font-size: 14px; font-weight: 600; text-align: center; }
+.status-bar-bg { height: 5px; background: var(–dim); border-radius: 100px; overflow: hidden; }
+.status-bar-fill {
+height: 100%; background: linear-gradient(90deg, var(–neon), var(–neon3));
+border-radius: 100px; width: 0%; transition: width 0.5s ease;
+box-shadow: 0 0 10px var(–neon);
+}
+.status-steps { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.status-step {
+font-family: var(–font-mono); font-size: 10px; color: var(–dim);
+display: flex; align-items: center; gap: 4px; transition: color 0.3s;
+}
+.status-step.active { color: var(–text); }
+.status-step.done { color: var(–neon); }
+.step-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.cancel-btn {
+background: none; border: 1px solid var(–border);
+border-radius: 8px; padding: 12px;
+color: var(–muted); width: 100%;
+font-family: var(–font-body); font-size: 14px; cursor: pointer;
+}
+.cancel-btn:active { border-color: var(–neon2); color: var(–neon2); }
+
+/* Result card */
+.result-section { display: none; flex-direction: column; gap: 16px; }
+.result-section.visible { display: flex; }
+.result-card {
+background: var(–surface); border: 1px solid var(–border);
+border-radius: var(–radius); overflow: hidden;
+}
+.result-top {
+padding: 18px;
+background: linear-gradient(135deg, rgba(0,255,225,0.05), rgba(162,89,255,0.05));
+border-bottom: 1px solid var(–border);
+display: flex; gap: 14px; align-items: flex-start;
+}
+.result-art {
+width: 64px; height: 64px; border-radius: 10px; flex-shrink: 0;
+display: flex; align-items: center; justify-content: center;
+font-size: 28px; position: relative;
+}
+.result-art::after {
+content:’’; position:absolute; inset:-2px; border-radius:12px;
+background: conic-gradient(var(–neon),var(–neon3),var(–neon2),var(–neon));
+z-index:-1; animation:rotate 4s linear infinite; opacity:0.6;
+}
+@keyframes rotate{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.result-info { flex: 1; min-width: 0; }
+.result-title { font-family: var(–font-display); font-size: 22px; letter-spacing: 2px; }
+.result-tagline { font-size: 12px; color: var(–muted); margin-top: 3px; }
+.result-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+.result-tag {
+font-family: var(–font-mono); font-size: 10px;
+padding: 3px 7px; border-radius: 4px;
+background: rgba(255,255,255,0.05); color: var(–muted);
+}
+.result-btns {
+display: flex; gap: 10px; padding: 14px 18px;
+border-bottom: 1px solid var(–border);
+}
+.rbtn {
+flex: 1; padding: 12px 8px; border-radius: 10px;
+border: 1px solid var(–border2); background: none;
+color: var(–text); font-family: var(–font-body);
+font-size: 13px; font-weight: 500; cursor: pointer;
+display: flex; align-items: center; justify-content: center; gap: 6px;
+transition: all 0.2s; text-decoration: none;
+-webkit-tap-highlight-color: transparent;
+}
+.rbtn:active { background: var(–surface2); border-color: var(–neon); color: var(–neon); }
+.rbtn.primary { background: var(–neon); color: #000; border-color: var(–neon); }
+.rbtn.primary:active { background: #00e8cc; }
+
+/* Waveform */
+.waveform-section { padding: 16px 18px; }
+.wave-display {
+height: 60px; display: flex; align-items: center; gap: 1px;
+cursor: pointer; margin-bottom: 12px;
+}
+.wave-bar { flex: 1; border-radius: 1px; background: var(–dim); transition: background 0.2s; }
+.wave-bar.played { background: var(–neon); opacity: 0.9; }
+.wave-bar.playing { background: var(–neon); box-shadow: 0 0 6px var(–neon); }
+.wave-controls { display: flex; align-items: center; gap: 12px; }
+.wave-play-btn {
+width: 48px; height: 48px; border-radius: 50%;
+background: var(–neon); color: #000; border: none;
+display: flex; align-items: center; justify-content: center;
+flex-shrink: 0; cursor: pointer;
+box-shadow: 0 0 20px rgba(0,255,225,0.3);
+-webkit-tap-highlight-color: transparent;
+}
+.wave-play-btn:active { transform: scale(0.93); }
+.time-disp { font-family: var(–font-mono); font-size: 12px; color: var(–muted); white-space: nowrap; }
+.vol-row { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.vol-slider {
+-webkit-appearance: none; width: 70px; height: 4px;
+background: var(–dim); border-radius: 100px; outline: none; cursor: pointer;
+}
+.vol-slider::-webkit-slider-thumb {
+-webkit-appearance: none; width: 16px; height: 16px;
+border-radius: 50%; background: var(–muted); cursor: pointer;
+}
+
+/* Lyrics display */
+.lyrics-display { padding: 0 18px 18px; border-top: 1px solid var(–border); padding-top: 16px; }
+.lyrics-hdr { font-family: var(–font-mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(–muted); margin-bottom: 10px; }
+.lyrics-body { font-size: 14px; line-height: 2; color: rgba(238,238,248,0.7); white-space: pre-line; font-style: italic; font-weight: 300; }
+
+/* Variations */
+.vars-section { display: flex; flex-direction: column; gap: 10px; }
+.vars-label { font-family: var(–font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(–muted); }
+.vars-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.var-card {
+background: var(–surface); border: 1px solid var(–border);
+border-radius: 10px; padding: 14px;
+display: flex; gap: 10px; align-items: center;
+cursor: pointer; -webkit-tap-highlight-color: transparent;
+transition: border-color 0.2s;
+}
+.var-card:active { border-color: var(–neon3); }
+.var-art { width: 38px; height: 38px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.var-lbl { font-family: var(–font-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(–muted); margin-bottom: 2px; }
+.var-name { font-size: 12px; font-weight: 600; }
+
+/* ── SONGS PANEL ── */
+.songs-empty { text-align: center; padding: 60px 20px; color: var(–muted); font-size: 14px; }
+.songs-empty .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+.songs-grid { display: flex; flex-direction: column; gap: 2px; }
+.song-row {
+display: flex; gap: 12px; align-items: center;
+padding: 14px 4px; border-radius: 10px;
+cursor: pointer; -webkit-tap-highlight-color: transparent;
+transition: background 0.15s; position: relative;
+}
+.song-row:active { background: var(–surface2); }
+.song-row.active { background: rgba(0,255,225,0.05); }
+.song-row.active::before { content:’’; position:absolute; left:0; top:20%; bottom:20%; width:2px; background:var(–neon); border-radius:2px; box-shadow:0 0 8px var(–neon); }
+.song-art { width: 50px; height: 50px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+.song-info { flex: 1; min-width: 0; }
+.song-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song-row.active .song-name { color: var(–neon); }
+.song-meta { font-size: 11px; color: var(–muted); font-family: var(–font-mono); margin-top: 3px; }
+.song-dur { font-family: var(–font-mono); font-size: 12px; color: var(–muted); flex-shrink: 0; }
+
+/* ── MINI PLAYER (bottom) ── */
+.mini-player {
+position: fixed; bottom: 0; left: 0; right: 0;
+background: rgba(10,10,22,0.97);
+backdrop-filter: blur(20px);
+border-top: 1px solid var(–border2);
+z-index: 80; padding: 10px 16px 12px;
+}
+.mini-player-inner {
+display: flex; gap: 12px; align-items: center;
+}
+.mini-art {
+width: 44px; height: 44px; border-radius: 8px;
+display: flex; align-items: center; justify-content: center;
+font-size: 20px; flex-shrink: 0;
+background: var(–surface2);
+}
+.mini-info { flex: 1; min-width: 0; }
+.mini-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-sub { font-size: 11px; color: var(–muted); font-family: var(–font-mono); margin-top: 2px; }
+.mini-play {
+width: 42px; height: 42px; border-radius: 50%;
+background: var(–neon); color: #000; border: none;
+display: flex; align-items: center; justify-content: center;
+flex-shrink: 0; cursor: pointer;
+box-shadow: 0 0 16px rgba(0,255,225,0.35);
+-webkit-tap-highlight-color: transparent;
+}
+.mini-play:active { transform: scale(0.92); }
+
+/* ── TOAST ── */
+.toast {
+position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(10px);
+background: var(–surface); border: 1px solid var(–border2);
+border-radius: 100px; padding: 10px 20px;
+font-size: 13px; color: var(–text);
+box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+opacity: 0; transition: all 0.3s; pointer-events: none;
+white-space: nowrap; z-index: 9998;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── DOT LOADER ── */
+.dot-loader { display: inline-flex; gap: 3px; align-items: center; vertical-align: middle; margin-left: 4px; }
+.dot-loader span {
+width: 4px; height: 4px; border-radius: 50%;
+background: var(–neon); animation: dotpulse 1.2s ease-in-out infinite;
+}
+.dot-loader span:nth-child(2){animation-delay:.2s}
+.dot-loader span:nth-child(3){animation-delay:.4s}
+@keyframes dotpulse{0%,100%{opacity:0.2;transform:scale(0.8)}50%{opacity:1;transform:scale(1)}}
+
+/* ── MODAL ── */
+.modal-overlay {
+position: fixed; inset: 0;
+background: rgba(0,0,0,0.88); backdrop-filter: blur(8px);
+z-index: 10000; display: flex; align-items: flex-end;
+padding: 0;
+}
+@media (min-width: 500px) {
+.modal-overlay { align-items: center; padding: 20px; }
+}
+.modal-box {
+background: var(–surface); border: 1px solid var(–border2);
+border-radius: 20px 20px 0 0; padding: 28px 24px 40px;
+width: 100%; max-width: 480px;
+box-shadow: 0 -20px 60px rgba(0,0,0,0.5);
+}
+@media (min-width: 500px) {
+.modal-box { border-radius: 20px; padding: 36px; }
+}
+.modal-handle {
+width: 40px; height: 4px; background: var(–dim);
+border-radius: 2px; margin: 0 auto 24px;
+}
+@media (min-width: 500px) { .modal-handle { display: none; } }
+.modal-title { font-family: var(–font-display); font-size: 26px; letter-spacing: 3px; margin-bottom: 6px; }
+.modal-sub { font-size: 13px; color: var(–muted); line-height: 1.7; margin-bottom: 22px; }
+.steps-box {
+background: var(–surface2); border-radius: 12px;
+padding: 18px; margin-bottom: 20px; border: 1px solid var(–border);
+}
+.steps-box-title { font-family: var(–font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(–muted); margin-bottom: 14px; }
+.step-item { display: flex; gap: 12px; align-items: flex-start; font-size: 13px; margin-bottom: 12px; }
+.step-item:last-child { margin-bottom: 0; }
+.step-num {
+width: 22px; height: 22px; border-radius: 50%;
+background: rgba(0,255,225,0.15); color: var(–neon);
+display: flex; align-items: center; justify-content: center;
+font-family: var(–font-mono); font-size: 11px; flex-shrink: 0; margin-top: 1px;
+}
+.token-input-wrap { margin-bottom: 20px; }
+.token-label { font-family: var(–font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(–muted); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.token-dot { width: 6px; height: 6px; border-radius: 50%; background: var(–neon); box-shadow: 0 0 8px var(–neon); display: inline-block; }
+.token-input {
+width: 100%; background: var(–surface2); border: 1px solid var(–border2);
+border-radius: 10px; color: var(–text);
+font-family: var(–font-mono); font-size: 13px;
+padding: 14px; outline: none; transition: border-color 0.2s;
+}
+.token-input:focus { border-color: rgba(0,255,225,0.4); }
+.token-hint { font-size: 11px; color: var(–muted); margin-top: 6px; }
+.modal-btns { display: flex; gap: 10px; }
+.modal-primary {
+flex: 1; padding: 16px; border-radius: 10px; border: none;
+background: var(–neon); color: #000;
+font-family: var(–font-display); font-size: 20px; letter-spacing: 2px;
+cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.modal-primary:active { background: #00e8cc; }
+.modal-skip {
+padding: 16px 18px; border-radius: 10px;
+border: 1px solid var(–border2); background: none;
+color: var(–muted); font-size: 13px; cursor: pointer;
+white-space: nowrap; -webkit-tap-highlight-color: transparent;
+}
+.modal-skip:active { color: var(–text); }
+.modal-footnote { font-size: 11px; color: var(–dim); text-align: center; margin-top: 12px; }
+
+/* ========== DESKTOP OVERRIDE (≥768px) ========== */
+@media (min-width: 768px) {
+.app-mobile { display: none; }
+.app-desktop { display: grid !important; }
+}
+
+/* ─── DESKTOP LAYOUT ─── */
+.app-desktop {
+display: none;
+grid-template-columns: 72px 260px 1fr;
+height: 100vh;
+overflow: hidden;
+}
+
+/* Desktop icon nav */
+.d-nav {
+background: var(–surface); border-right: 1px solid var(–border);
+display: flex; flex-direction: column; align-items: center;
+padding: 20px 0; gap: 6px; z-index: 10;
+}
+.d-brand {
+font-family: var(–font-display); font-size: 22px; letter-spacing: 2px;
+color: var(–neon); margin-bottom: 20px;
+writing-mode: vertical-rl; transform: rotate(180deg);
+text-shadow: 0 0 20px rgba(0,255,225,0.5);
+}
+.d-nav-btn {
+width: 44px; height: 44px; border-radius: 10px; border: none;
+background: transparent; color: var(–muted); cursor: pointer;
+display: flex; align-items: center; justify-content: center;
+transition: all 0.2s; position: relative;
+}
+.d-nav-btn:hover { background: var(–surface2); color: var(–text); }
+.d-nav-btn.active { background: rgba(0,255,225,0.1); color: var(–neon); box-shadow: 0 0 0 1px rgba(0,255,225,0.2); }
+.d-nav-btn.active::before { content:’’; position:absolute; left:-1px; top:25%; bottom:25%; width:2px; background:var(–neon); border-radius:0 2px 2px 0; box-shadow:0 0 8px var(–neon); }
+.d-nav-spacer { flex: 1; }
+
+/* Desktop library */
+.d-library {
+background: var(–surface); border-right: 1px solid var(–border);
+display: flex; flex-direction: column; overflow: hidden;
+}
+.d-lib-header { padding: 24px 20px 16px; border-bottom: 1px solid var(–border); display: flex; align-items: center; justify-content: space-between; }
+.d-lib-title { font-family: var(–font-display); font-size: 20px; letter-spacing: 2px; }
+.d-lib-count { font-family: var(–font-mono); font-size: 11px; color: var(–muted); background: var(–surface2); padding: 3px 8px; border-radius: 100px; }
+.d-songs { flex: 1; overflow-y: auto; padding: 8px 0; }
+.d-songs::-webkit-scrollbar { width: 0; }
+.d-song-card { padding: 12px 20px; cursor: pointer; transition: background 0.15s; display: flex; gap: 12px; align-items: center; position: relative; }
+.d-song-card:hover { background: var(–surface2); }
+.d-song-card.active { background: rgba(0,255,225,0.05); }
+.d-song-card.active::before { content:’’; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(–neon); box-shadow:0 0 8px var(–neon); }
+.d-song-thumb { width: 44px; height: 44px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative; overflow: hidden; }
+.d-song-thumb .d-play-ov { position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s; }
+.d-song-card:hover .d-play-ov { opacity: 1; }
+.d-song-meta { min-width: 0; flex: 1; }
+.d-song-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.d-song-card.active .d-song-name { color: var(–neon); }
+.d-song-genre { font-size: 11px; color: var(–muted); font-family: var(–font-mono); margin-top: 2px; }
+.d-song-dur { font-family: var(–font-mono); font-size: 11px; color: var(–muted); flex-shrink: 0; }
+
+/* Desktop main */
+.d-main { display: grid; grid-template-rows: 1fr 78px; overflow: hidden; }
+.d-generator { overflow-y: auto; padding: 40px 48px; display: flex; flex-direction: column; gap: 28px; }
+.d-generator::-webkit-scrollbar { width: 4px; }
+.d-generator::-webkit-scrollbar-thumb { background: var(–dim); border-radius: 4px; }
+
+.d-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.d-title { font-family: var(–font-display); font-size: 52px; letter-spacing: 4px; line-height: 0.9; background: linear-gradient(135deg,var(–text) 0%,var(–neon) 60%,var(–neon3) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.d-subtitle { font-size: 14px; color: var(–muted); margin-top: 10px; font-weight: 300; }
+.d-credits { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.d-cred-num { font-family: var(–font-display); font-size: 32px; color: var(–gold); text-shadow: 0 0 20px rgba(255,209,102,0.4); }
+.d-cred-lbl { font-family: var(–font-mono); font-size: 10px; color: var(–muted); letter-spacing: 0.12em; text-transform: uppercase; }
+
+.d-controls-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 16px; align-items: end; }
+.d-generate-btn {
+padding: 0 32px; height: 50px; border-radius: 10px; border: none;
+background: var(–neon); color: #000;
+font-family: var(–font-display); font-size: 20px; letter-spacing: 3px;
+cursor: pointer; transition: all 0.2s; white-space: nowrap;
+box-shadow: 0 0 30px rgba(0,255,225,0.25);
+}
+.d-generate-btn:hover { transform: translateY(-2px); box-shadow: 0 0 50px rgba(0,255,225,0.4); }
+.d-generate-btn:disabled { background: var(–dim); color: var(–muted); cursor: not-allowed; transform: none; box-shadow: none; }
+
+.d-dur-row { display: flex; gap: 8px; align-items: center; }
+
+/* Desktop bottom player */
+.d-player {
+background: rgba(14,14,26,0.97); backdrop-filter: blur(20px);
+border-top: 1px solid var(–border);
+display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+gap: 32px; padding: 0 48px; z-index: 50;
+}
+.d-np { display: flex; gap: 14px; align-items: center; }
+.d-np-art { width: 46px; height: 46px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.d-np-title { font-size: 13px; font-weight: 600; }
+.d-np-artist { font-size: 11px; color: var(–muted); margin-top: 2px; font-family: var(–font-mono); }
+.d-main-ctrl { display: flex; align-items: center; gap: 20px; }
+.d-ctrl { background: none; border: none; color: var(–muted); cursor: pointer; transition: color 0.2s; }
+.d-ctrl:hover { color: var(–text); }
+.d-play { width: 40px; height: 40px; border-radius: 50%; background: var(–neon); color: #000; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .15s; box-shadow: 0 0 20px rgba(0,255,225,0.3); }
+.d-play:hover { transform: scale(1.08); }
+.d-right { display: flex; gap: 14px; align-items: center; justify-content: flex-end; }
+.d-rc { background: none; border: none; color: var(–muted); cursor: pointer; transition: color 0.2s; }
+.d-rc:hover { color: var(–text); }
+
+/* Shared */
+.action-btn {
+padding: 8px 16px; border-radius: 8px; border: 1px solid var(–border2);
+background: none; color: var(–text); font-family: var(–font-body);
+font-size: 13px; font-weight: 500; cursor: pointer;
+transition: all 0.2s; display: flex; align-items: center; gap: 6px; text-decoration: none;
+}
+.action-btn:hover { background: var(–surface2); border-color: var(–neon); color: var(–neon); }
+.action-btn.primary { background: var(–neon); color: #000; border-color: var(–neon); }
+.action-btn.primary:hover { background: #00e8cc; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(–dim); border-radius: 4px; }
+</style>
+
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<!-- ════════════════════════════════════
+     MOBILE APP
+════════════════════════════════════ -->
+
+<div class="app-mobile" id="appMobile">
+
+  <!-- Header -->
+
+  <header class="mobile-header">
+    <div class="mobile-logo">SOUNDFORGE</div>
+    <div class="mobile-header-right">
+      <button class="hdr-btn" onclick="openApiModal()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        Token
+      </button>
+    </div>
+  </header>
+
+  <!-- Tab bar -->
+
+  <nav class="mobile-tabs">
+    <button class="mtab active" id="tabStudio" onclick="switchMobileTab('studio')">🎛 Studio</button>
+    <button class="mtab" id="tabSongs" onclick="switchMobileTab('songs')">🎵 My Songs</button>
+  </nav>
+
+  <!-- STUDIO TAB -->
+
+  <div class="tab-panel active" id="panelStudio">
+
+```
+<div class="studio-hero">
+  <div class="studio-title">AI MUSIC<br>STUDIO</div>
+  <div class="studio-sub">Describe your sound. We'll compose the rest.</div>
+</div>
+
+<!-- Mode selector -->
+<div class="mode-row" id="mModeRow">
+  <button class="mode-tab active" onclick="setMode('simple',this)">Simple</button>
+  <button class="mode-tab" onclick="setMode('custom',this)">Lyrics</button>
+  <button class="mode-tab" onclick="setMode('instrumental',this)">Instrumental</button>
+</div>
+
+<!-- Prompt -->
+<div class="prompt-card">
+  <div class="prompt-label">Song Description</div>
+  <textarea class="prompt-input" id="promptInput" placeholder="A melancholic lo-fi track with soft piano, rain sounds, and jazzy guitar. Late night city vibes…" rows="3" oninput="updateCharCount()"></textarea>
+  <div class="prompt-footer">
+    <div class="tag-pills">
+      <button class="tag-pill" onclick="addTag(this,'lo-fi')">lo-fi</button>
+      <button class="tag-pill" onclick="addTag(this,'epic')">epic</button>
+      <button class="tag-pill" onclick="addTag(this,'upbeat')">upbeat</button>
+      <button class="tag-pill" onclick="addTag(this,'dark')">dark</button>
+      <button class="tag-pill" onclick="addTag(this,'chill')">chill</button>
+      <button class="tag-pill" onclick="addTag(this,'cinematic')">cinematic</button>
+      <button class="tag-pill" onclick="addTag(this,'ambient')">ambient</button>
+    </div>
+    <div class="char-count" id="charCount">0/500</div>
+  </div>
+</div>
+
+<!-- Lyrics panel -->
+<div id="lyricsPanel" style="display:none">
+  <div class="lyrics-card">
+    <div class="prompt-label">Custom Lyrics <span style="color:var(--neon3);font-size:9px">AI ASSISTED</span></div>
+    <textarea class="lyrics-textarea" id="lyricsInput" placeholder="Type your own lyrics or tap Generate…" rows="5"></textarea>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <button class="tag-pill selected" onclick="generateLyrics()" style="font-size:12px;padding:8px 16px">
+        ⚡ Generate Lyrics
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="controls-grid">
+  <div class="control-group">
+    <div class="control-label">Genre</div>
+    <select class="control-select" id="genreSelect">
+      <option>Electronic</option>
+      <option>Lo-fi Hip-Hop</option>
+      <option>Cinematic</option>
+      <option>Pop</option>
+      <option>Jazz</option>
+      <option>Ambient</option>
+      <option>Metal</option>
+      <option>R&amp;B</option>
+      <option>Classical</option>
+      <option>Indie Rock</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <div class="control-label">Mood</div>
+    <select class="control-select" id="moodSelect">
+      <option>Melancholic</option>
+      <option>Energetic</option>
+      <option>Peaceful</option>
+      <option>Dark &amp; Intense</option>
+      <option>Uplifting</option>
+      <option>Mysterious</option>
+      <option>Romantic</option>
+      <option>Aggressive</option>
+    </select>
+  </div>
+  <div class="control-group" style="grid-column:1/-1">
+    <div class="bpm-row">
+      <div class="control-label">BPM</div>
+      <div class="control-label" style="color:var(--neon)" id="bpmVal">88</div>
+    </div>
+    <input type="range" class="control-slider" min="60" max="180" value="88"
+      oninput="document.getElementById('bpmVal').textContent=this.value">
+  </div>
+</div>
+
+<!-- Duration -->
+<div>
+  <div class="dur-label">Duration</div>
+  <div class="duration-row">
+    <button class="tag-pill selected" onclick="setDuration(this,'0:30')">0:30</button>
+    <button class="tag-pill" onclick="setDuration(this,'1:00')">1:00</button>
+    <button class="tag-pill" onclick="setDuration(this,'2:00')">2:00</button>
+    <button class="tag-pill" onclick="setDuration(this,'3:00')">3:00</button>
+    <button class="tag-pill" onclick="setDuration(this,'4:00')">4:00</button>
+  </div>
+</div>
+
+<!-- Forge button -->
+<button class="forge-btn" id="generateBtn" onclick="startGeneration()">FORGE</button>
+
+<!-- Status -->
+<div class="gen-status" id="genStatus">
+  <div class="status-anim">
+    <div class="sw-bar"></div><div class="sw-bar"></div><div class="sw-bar"></div>
+    <div class="sw-bar"></div><div class="sw-bar"></div><div class="sw-bar"></div>
+    <div class="sw-bar"></div><div class="sw-bar"></div>
+  </div>
+  <div class="status-label" id="statusTitle">Composing your track <div class="dot-loader" style="display:inline-flex"><span></span><span></span><span></span></div></div>
+  <div class="status-bar-bg"><div class="status-bar-fill" id="statusBar"></div></div>
+  <div class="status-steps">
+    <div class="status-step" id="step1"><div class="step-dot"></div>ANALYZE</div>
+    <div class="status-step" id="step2"><div class="step-dot"></div>COMPOSE</div>
+    <div class="status-step" id="step3"><div class="step-dot"></div>GENERATE</div>
+    <div class="status-step" id="step4"><div class="step-dot"></div>MASTER</div>
+  </div>
+  <button class="cancel-btn" onclick="cancelGeneration()">Cancel</button>
+</div>
+
+<!-- Result -->
+<div class="result-section" id="resultSection">
+  <div class="result-card" id="resultCard"></div>
+  <div class="vars-section">
+    <div class="vars-label">Variations</div>
+    <div class="vars-grid" id="variationsRow"></div>
+  </div>
+</div>
+```
+
+  </div><!-- /panelStudio -->
+
+  <!-- SONGS TAB -->
+
+  <div class="tab-panel" id="panelSongs">
+    <div id="songsList">
+      <div class="songs-empty">
+        <div class="empty-icon">🎵</div>
+        Generate your first song<br>in the Studio tab
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app-mobile -->
+
+<!-- ════════════════════════════════════
+     DESKTOP APP
+════════════════════════════════════ -->
+
+<div class="app-desktop" id="appDesktop">
+
+  <!-- Icon nav -->
+
+  <nav class="d-nav">
+    <div class="d-brand">SF</div>
+    <button class="d-nav-btn active">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+    </button>
+    <button class="d-nav-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    </button>
+    <button class="d-nav-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    </button>
+    <div class="d-nav-spacer"></div>
+    <button class="d-nav-btn" onclick="openApiModal()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+    </button>
+    <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--neon3),var(--neon2));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px">U</div>
+  </nav>
+
+  <!-- Library -->
+
+  <aside class="d-library">
+    <div class="d-lib-header">
+      <div class="d-lib-title">MY SONGS</div>
+      <div class="d-lib-count" id="dSongCount">0 tracks</div>
+    </div>
+    <div class="d-songs" id="dSongsList">
+      <div style="padding:40px 20px;text-align:center;color:var(--muted);font-size:13px">
+        <div style="font-size:32px;margin-bottom:12px;opacity:0.4">🎵</div>
+        Generate your first<br>song to get started
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+
+  <div class="d-main">
+    <div class="d-generator" id="dGenerator">
+
+```
+  <div class="d-header">
+    <div>
+      <div class="d-title">AI MUSIC<br>STUDIO</div>
+      <div class="d-subtitle">Describe your sound. We'll compose the rest.</div>
+    </div>
+    <div class="d-credits">
+      <div class="d-cred-num">50</div>
+      <div class="d-cred-lbl">credits left</div>
+    </div>
+  </div>
+
+  <!-- Mode tabs -->
+  <div>
+    <div class="mode-row" style="width:fit-content" id="dModeRow">
+      <button class="mode-tab active" onclick="setMode('simple',this)">Simple</button>
+      <button class="mode-tab" onclick="setMode('custom',this)">Custom Lyrics</button>
+      <button class="mode-tab" onclick="setMode('instrumental',this)">Instrumental</button>
+    </div>
+  </div>
+
+  <!-- Prompt -->
+  <div class="prompt-card">
+    <div class="prompt-label">Song Description</div>
+    <textarea class="prompt-input" id="dPromptInput" placeholder="A melancholic lo-fi track with soft piano, rain sounds, and jazzy guitar. Late night city vibes, slow tempo, instrumental with occasional vinyl crackle…" rows="3" oninput="updateCharCountD()"></textarea>
+    <div class="prompt-footer">
+      <div class="tag-pills">
+        <button class="tag-pill" onclick="addTagD(this,'lo-fi')">lo-fi</button>
+        <button class="tag-pill" onclick="addTagD(this,'epic')">epic</button>
+        <button class="tag-pill" onclick="addTagD(this,'upbeat')">upbeat</button>
+        <button class="tag-pill" onclick="addTagD(this,'dark')">dark</button>
+        <button class="tag-pill" onclick="addTagD(this,'chill')">chill</button>
+        <button class="tag-pill" onclick="addTagD(this,'cinematic')">cinematic</button>
+        <button class="tag-pill" onclick="addTagD(this,'ambient')">ambient</button>
+        <button class="tag-pill" onclick="addTagD(this,'trap')">trap</button>
+      </div>
+      <div class="char-count" id="dCharCount">0/500</div>
+    </div>
+  </div>
+
+  <!-- Lyrics panel desktop -->
+  <div id="dLyricsPanel" style="display:none">
+    <div class="prompt-card">
+      <div class="prompt-label">Custom Lyrics <span style="color:var(--neon3);font-size:9px">AI ASSISTED</span></div>
+      <textarea class="prompt-input" id="dLyricsInput" placeholder="Type your own lyrics or click Generate Lyrics…" rows="5"></textarea>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between">
+        <button class="action-btn" onclick="generateLyricsD()" style="font-size:12px;padding:6px 14px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Generate Lyrics
+        </button>
+        <div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls row -->
+  <div class="d-controls-row">
+    <div class="control-group">
+      <div class="control-label">Genre</div>
+      <select class="control-select" id="dGenreSelect">
+        <option>Electronic</option><option>Lo-fi Hip-Hop</option><option>Cinematic</option>
+        <option>Pop</option><option>Jazz</option><option>Ambient</option>
+        <option>Metal</option><option>R&amp;B</option><option>Classical</option><option>Indie Rock</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <div class="control-label">Mood</div>
+      <select class="control-select" id="dMoodSelect">
+        <option>Melancholic</option><option>Energetic</option><option>Peaceful</option>
+        <option>Dark &amp; Intense</option><option>Uplifting</option><option>Mysterious</option>
+        <option>Romantic</option><option>Aggressive</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <div class="control-label">BPM — <span id="dBpmVal" style="color:var(--neon)">88</span></div>
+      <input type="range" class="control-slider" min="60" max="180" value="88"
+        oninput="document.getElementById('dBpmVal').textContent=this.value">
+    </div>
+    <button class="d-generate-btn" id="dGenerateBtn" onclick="startGenerationD()">FORGE</button>
+  </div>
+
+  <!-- Duration -->
+  <div class="d-dur-row">
+    <div class="control-label">Duration</div>
+    <button class="tag-pill selected" onclick="setDurationD(this,'0:30')">0:30</button>
+    <button class="tag-pill" onclick="setDurationD(this,'1:00')">1:00</button>
+    <button class="tag-pill" onclick="setDurationD(this,'2:00')">2:00</button>
+    <button class="tag-pill" onclick="setDurationD(this,'3:00')">3:00</button>
+    <button class="tag-pill" onclick="setDurationD(this,'4:00')">4:00</button>
+  </div>
+
+  <!-- Status -->
+  <div class="gen-status" id="dGenStatus">
+    <div style="display:flex;align-items:center;gap:20px;width:100%">
+      <div class="status-anim">
+        <div class="sw-bar"></div><div class="sw-bar"></div><div class="sw-bar"></div>
+        <div class="sw-bar"></div><div class="sw-bar"></div><div class="sw-bar"></div>
+        <div class="sw-bar"></div><div class="sw-bar"></div>
+      </div>
+      <div class="status-label" id="dStatusTitle" style="flex:1">Composing <div class="dot-loader" style="display:inline-flex"><span></span><span></span><span></span></div></div>
+      <button class="cancel-btn" style="width:auto;padding:8px 16px" onclick="cancelGenerationD()">Cancel</button>
+    </div>
+    <div style="width:100%">
+      <div class="status-bar-bg"><div class="status-bar-fill" id="dStatusBar"></div></div>
+      <div class="status-steps" style="margin-top:10px">
+        <div class="status-step" id="dStep1"><div class="step-dot"></div>ANALYZE</div>
+        <div class="status-step" id="dStep2"><div class="step-dot"></div>COMPOSE</div>
+        <div class="status-step" id="dStep3"><div class="step-dot"></div>GENERATE AUDIO</div>
+        <div class="status-step" id="dStep4"><div class="step-dot"></div>MASTER</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result desktop -->
+  <div class="result-section" id="dResultSection">
+    <div class="result-card" id="dResultCard"></div>
+    <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)">Variations</div>
+    <div class="vars-grid" id="dVariationsRow"></div>
+  </div>
+
+</div><!-- /d-generator -->
+
+<!-- Desktop player -->
+<div class="d-player">
+  <div class="d-np">
+    <div class="d-np-art" id="dNpArt" style="background:var(--surface2)">🎵</div>
+    <div>
+      <div class="d-np-title" id="dNpTitle">No track selected</div>
+      <div class="d-np-artist" id="dNpArtist">SOUNDFORGE AI</div>
+    </div>
+  </div>
+  <div class="d-main-ctrl">
+    <button class="d-ctrl"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg></button>
+    <button class="d-ctrl"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"/></svg></button>
+    <button class="d-play" id="dGlobalPlay" onclick="toggleGlobalPlay()">
+      <svg id="gPlayIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <svg id="gPauseIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+    </button>
+    <button class="d-ctrl"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"/></svg></button>
+    <button class="d-ctrl"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></button>
+  </div>
+  <div class="d-right">
+    <div style="display:flex;align-items:center;gap:8px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>
+      <input type="range" class="vol-slider" min="0" max="100" value="75" style="width:80px">
+    </div>
+  </div>
+</div>
+```
+
+  </div><!-- /d-main -->
+
+</div><!-- /app-desktop -->
+
+<!-- ── MINI PLAYER (mobile only) ── -->
+
+<div class="mini-player" id="miniPlayer" style="display:none">
+  <div class="mini-player-inner">
+    <div class="mini-art" id="miniArt">🎵</div>
+    <div class="mini-info">
+      <div class="mini-title" id="miniTitle">No track selected</div>
+      <div class="mini-sub" id="miniSub">SOUNDFORGE AI</div>
+    </div>
+    <button class="mini-play" id="miniPlayBtn" onclick="toggleGlobalPlay()">
+      <svg id="mGPlayIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <svg id="mGPauseIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- Toast -->
+
+<div class="toast" id="toast"></div>
+
+<!-- ── HF KEY MODAL ── -->
+
+<div id="apiModal" style="display:none">
+<div class="modal-overlay" id="apiModalInner">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">FREE SETUP</div>
+    <div class="modal-sub">SOUNDFORGE uses <strong style="color:var(--text)">Hugging Face's free MusicGen</strong> for real AI audio. On mobile you'll also need a free Cloudflare Worker proxy to bypass browser restrictions.</div>
+
+```
+<!-- Tab switcher -->
+<div style="display:flex;gap:4px;background:var(--surface2);border-radius:10px;padding:3px;margin-bottom:18px">
+  <button id="tabTokenBtn" onclick="showModalTab('token')" style="flex:1;padding:8px;border-radius:7px;border:none;background:var(--surface);color:var(--text);font-family:var(--font-body);font-size:13px;font-weight:500;cursor:pointer">🔑 HF Token</button>
+  <button id="tabWorkerBtn" onclick="showModalTab('worker')" style="flex:1;padding:8px;border-radius:7px;border:none;background:none;color:var(--muted);font-family:var(--font-body);font-size:13px;cursor:pointer">⚡ Worker URL</button>
+</div>
+
+<!-- Token tab -->
+<div id="tabToken">
+  <div class="steps-box">
+    <div class="steps-box-title">Get your free HF token (2 min)</div>
+    <div class="step-item"><div class="step-num">1</div><span>Go to <a href="https://huggingface.co/join" target="_blank" style="color:var(--neon);text-decoration:none">huggingface.co/join</a> — create free account</span></div>
+    <div class="step-item"><div class="step-num">2</div><span>Profile icon → <strong>Settings → Access Tokens</strong></span></div>
+    <div class="step-item"><div class="step-num">3</div><span><strong>New token</strong> → name anything → role: <strong>Read</strong> → copy</span></div>
+  </div>
+  <div class="token-input-wrap">
+    <div class="token-label"><span class="token-dot"></span> Hugging Face Token — 100% free</div>
+    <input class="token-input" id="hfKey" type="password" placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      onkeydown="if(event.key==='Enter') saveApiKeys()">
+    <div class="token-hint">Starts with <code style="color:var(--neon);background:rgba(0,255,225,0.08);padding:1px 5px;border-radius:3px">hf_</code> · Session only · Never shared</div>
+  </div>
+</div>
+
+<!-- Worker tab -->
+<div id="tabWorker" style="display:none">
+  <div class="steps-box">
+    <div class="steps-box-title" style="color:var(--gold)">⚡ Required for iOS Safari / mobile</div>
+    <div class="step-item"><div class="step-num">1</div><span>Go to <a href="https://workers.cloudflare.com" target="_blank" style="color:var(--neon);text-decoration:none">workers.cloudflare.com</a> — free account</span></div>
+    <div class="step-item"><div class="step-num">2</div><span>Create Worker → paste the <strong style="color:var(--neon)">worker.js</strong> code (downloaded with this app)</span></div>
+    <div class="step-item"><div class="step-num">3</div><span>Deploy → copy the <code style="color:var(--neon)">*.workers.dev</code> URL → paste below</span></div>
+  </div>
+  <div class="token-input-wrap">
+    <div class="token-label"><span class="token-dot" style="background:var(--gold)"></span> Cloudflare Worker URL <span style="color:var(--gold);font-size:9px">MOBILE FIX</span></div>
+    <input class="token-input" id="workerUrl" type="url" placeholder="https://soundforge.yourname.workers.dev"
+      onkeydown="if(event.key==='Enter') saveApiKeys()">
+    <div class="token-hint">Without this, iOS Safari will block audio generation with a CORS error.</div>
+  </div>
+</div>
+
+<div class="modal-btns">
+  <button class="modal-primary" onclick="saveApiKeys()">LAUNCH STUDIO</button>
+  <button class="modal-skip" onclick="skipApiKeys()">Demo mode</button>
+</div>
+<div class="modal-footnote">No setup? Demo mode lets you explore the full UI.</div>
+```
+
+  </div>
+</div>
+</div>
+
+<script>
+
+// ── STATE ──
+let songs = [];
+let currentMode = 'simple';
+let selectedDuration = '0:30';
+let isPlaying = false;
+let currentSongIdx = -1;
+let cancelRequested = false;
+let HF_KEY = '';
+let demoMode = false;
+
+const EMOJIS = ['🌊','⚡','🌙','🔥','🎸','🌌','🎹','💫','🌿','🎷','🎺','💜'];
+const GRADIENTS = [
+  'linear-gradient(135deg,#0f2027,#203a43)',
+  'linear-gradient(135deg,#1a1a2e,#4a4a8e)',
+  'linear-gradient(135deg,#2d1b69,#11998e)',
+  'linear-gradient(135deg,#200122,#6f0000)',
+  'linear-gradient(135deg,#11998e,#38ef7d)',
+  'linear-gradient(135deg,#f7971e,#ff416c)',
+  'linear-gradient(135deg,#4776e6,#8e54e9)',
+  'linear-gradient(135deg,#373b44,#4286f4)',
+];
+
+// ── MODAL ──
+function saveApiKeys() {
+  const key = document.getElementById('hfKey').value.trim();
+  const workerInput = document.getElementById('workerUrl');
+  const worker = workerInput ? workerInput.value.trim() : '';
+
+  if (!key && !worker) { showToast('Paste your HF token first', '⚠️'); return; }
+  if (key && !key.startsWith('hf_')) { showToast('Token should start with hf_', '⚠️'); return; }
+  if (worker && !worker.startsWith('http')) { showToast('Worker URL should start with https://', '⚠️'); return; }
+
+  if (key) HF_KEY = key;
+  if (worker) WORKER_URL = worker;
+
+  document.getElementById('apiModal').style.display = 'none';
+  const msg = worker ? 'Worker + Token saved — mobile ready! 🚀' : 'Token saved — forge away! 🎛️';
+  showToast(msg, '✓');
+}
+
+function showModalTab(tab) {
+  document.getElementById('tabToken').style.display = tab === 'token' ? '' : 'none';
+  document.getElementById('tabWorker').style.display = tab === 'worker' ? '' : 'none';
+  document.getElementById('tabTokenBtn').style.background = tab === 'token' ? 'var(--surface)' : 'none';
+  document.getElementById('tabTokenBtn').style.color = tab === 'token' ? 'var(--text)' : 'var(--muted)';
+  document.getElementById('tabWorkerBtn').style.background = tab === 'worker' ? 'var(--surface)' : 'none';
+  document.getElementById('tabWorkerBtn').style.color = tab === 'worker' ? 'var(--text)' : 'var(--muted)';
+}
+
+function skipApiKeys() {
+  demoMode = true;
+  document.getElementById('apiModal').style.display = 'none';
+  showToast('Demo mode — audio simulated', '🎭');
+}
+
+function openApiModal() {
+  document.getElementById('apiModal').style.display = 'flex';
+}
+
+// ── HELPERS ──
+function showToast(msg, icon = '✓') {
+  const el = document.getElementById('toast');
+  el.innerHTML = `<span style="color:var(--neon)">${icon}</span> ${msg}`;
+  el.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function showErrorBanner(msg) {
+  // Remove any existing error banner
+  const existing = document.getElementById('errorBanner');
+  if (existing) existing.remove();
+
+  const banner = document.createElement('div');
+  banner.id = 'errorBanner';
+  banner.style.cssText = `
+    background: rgba(255,45,120,0.12);
+    border: 1px solid rgba(255,45,120,0.4);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin-top: 8px;
+  `;
+  banner.innerHTML = `
+    <span style="font-size:20px;flex-shrink:0">❌</span>
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:600;font-size:14px;margin-bottom:4px;color:#ff6b9d">Generation Failed</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.5;word-break:break-word">${msg}</div>
+      <div style="margin-top:10px;font-size:12px;color:var(--dim)">
+        💡 If this keeps happening, try: tap <strong style="color:var(--text)">Token</strong> and paste a fresh HF token, or use <strong style="color:var(--text)">Demo mode</strong> to explore without audio.
+      </div>
+    </div>
+    <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:0;flex-shrink:0">×</button>
+  `;
+
+  // Insert after the controls row / generate button area
+  const genStatus = document.getElementById('genStatus');
+  if (genStatus) genStatus.parentNode.insertBefore(banner, genStatus.nextSibling);
+  banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function updateCharCount() {
+  const v = document.getElementById('promptInput').value.length;
+  document.getElementById('charCount').textContent = `${v}/500`;
+}
+
+function setMode(mode, btn) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('lyricsPanel').style.display = mode === 'custom' ? 'block' : 'none';
+}
+
+function setDuration(btn, dur) {
+  selectedDuration = dur;
+  document.querySelectorAll('.tag-pill').forEach(p => {
+    if (['0:30','1:00','2:00','3:00','4:00'].includes(p.textContent)) p.classList.remove('selected');
+  });
+  btn.classList.add('selected');
+}
+
+function addTag(btn, tag) {
+  btn.classList.toggle('selected');
+  const input = document.getElementById('promptInput');
+  input.value = btn.classList.contains('selected')
+    ? (input.value + ' ' + tag).trim()
+    : input.value.replace(new RegExp('\\b' + tag + '\\b', 'g'), '').replace(/\s+/g, ' ').trim();
+  updateCharCount();
+}
+
+function setNav(btn) {
+  document.querySelectorAll('.nav-icon-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function setStatus(label, progress) {
+  document.getElementById('statusTitle').innerHTML = label + ' <div class="dot-loader" style="display:inline-flex"><span></span><span></span><span></span></div>';
+  document.getElementById('statusBar').style.width = progress + '%';
+}
+
+function markStep(id, state) {
+  const el = document.getElementById(id);
+  el.classList.remove('done', 'active');
+  if (state) el.classList.add(state);
+}
+
+// ── BUILT-IN TITLE + LYRICS ENGINE (no API needed) ──
+const TITLE_WORDS = {
+  Electronic: ['Neon','Voltage','Circuit','Pulse','Signal','Binary','Static','Flux'],
+  'Lo-fi Hip-Hop': ['Dusk','Haze','Drift','Amber','Fog','Quiet','Slow','Rain'],
+  Cinematic: ['Horizon','Aether','Requiem','Ascent','Void','Zenith','Elegy','Omen'],
+  Pop: ['Glow','Rush','Spark','Rise','Shine','Echo','Wave','Dream'],
+  Jazz: ['Smoke','Velvet','Indigo','Ember','Lace','Dusk','Swing','Noir'],
+  Ambient: ['Mist','Void','Drift','Halo','Ether','Bloom','Fade','Still'],
+  Metal: ['Iron','Rage','Storm','Abyss','Fury','Wraith','Shatter','Inferno'],
+  'R&B': ['Silk','Burn','Honey','Pulse','Night','Velvet','Sway','Ache'],
+  Classical: ['Sonata','Nocturne','Étude','Prelude','Aria','Canon','Opus','Hymn'],
+  'Indie Rock': ['Rust','Hollow','Dust','Flicker','Worn','Salt','Drift','Static'],
+};
+const TITLE_SUFFIX = ['Protocol','Cascade','Phase','Sequence','Resonance','Frequency','Depth','Current','Layer','Motion','Drift','Signal'];
+const TAGLINES = {
+  Melancholic: ['Late night thoughts in sound','Where silence meets the beat','Echoes of something lost'],
+  Energetic: ['Full throttle from the first note','Built to move','Pure kinetic energy'],
+  Peaceful: ['A breath of still air','Slow down and feel it','Gentle as the morning'],
+  'Dark & Intense': ['Tension without release','Deep in the undertow','Where light fears to go'],
+  Uplifting: ['Rise above the noise','A sonic sunrise','Feel it lift you up'],
+  Mysterious: ['Something stirs beneath','Questions without answers','In the space between beats'],
+  Romantic: ['Soft and close and warm','Written for two','The feeling you can\'t name'],
+  Aggressive: ['No mercy, just rhythm','Hit hard, hit fast','Pure sonic force'],
+};
+const LYRIC_TEMPLATES = [
+  (p,g,m) => `[Verse 1]\nIn the ${m.toLowerCase()} hours before the dawn\nSomething in the melody carries on\nEvery note a colour, every beat a breath\nWe were made for this, we were made for this\n\n[Chorus]\nLet it take you somewhere far away\nLet the ${g.toLowerCase()} wash over everything\nFeel it in your chest, feel it in your bones\nYou were never really all alone\n\n[Verse 2]\nTime moves different when the music plays\nLost inside these ${m.toLowerCase()} summer days\nFingers on the keys and the world goes still\nSomething in this sound gives me such a thrill\n\n[Chorus]\nLet it take you somewhere far away\nLet the ${g.toLowerCase()} wash over everything\nFeel it in your chest, feel it in your bones\nYou were never really all alone\n\n[Outro]\nFade into the sound\nFade into the sound`,
+  (p,g,m) => `[Verse 1]\nNeon lights and static in the air\n${m} nights, there's something everywhere\nThe bassline hits like thunder in the deep\nThis is the sound that breaks me from my sleep\n\n[Pre-Chorus]\nAnd I can feel it building, building\nSomething in the air is filling\n\n[Chorus]\nThis is where I want to be\nLost inside this ${g.toLowerCase()} melody\nEvery single note set free\nThis is where I want to be\n\n[Verse 2]\nClose my eyes and let the rhythm lead\nEvery beat is every single thing I need\nSomewhere in the frequency I find\nA place to leave the whole world far behind\n\n[Bridge]\nDon't stop the music now\nDon't let it fade somehow\nKeep the ${m.toLowerCase()} alive\nThis is how we survive\n\n[Chorus]\nThis is where I want to be\nLost inside this ${g.toLowerCase()} melody\nEvery single note set free\nThis is where I want to be`,
+  (p,g,m) => `[Verse 1]\nSomewhere in the sound of this ${g.toLowerCase()}\nI found the piece of me I thought I'd lost\nThe ${m.toLowerCase()} hum of late-night frequencies\nCarrying me somewhere across the seas\n\n[Chorus]\nPlay it one more time for me\nOne more beautiful ${m.toLowerCase()} melody\nLet it hold me like it used to do\nSomething in this music feels like you\n\n[Verse 2]\nEvery bar a memory, every rest a sigh\nEvery crescendo like a last goodbye\nBut somehow in the ending there's a start\nAnd the music stitches back together every broken part\n\n[Bridge]\nJust the rhythm and the night\nJust the melody and light\nJust the two of us and sound\nThis is sacred, this is hallowed ground\n\n[Chorus]\nPlay it one more time for me\nOne more beautiful ${m.toLowerCase()} melody\nLet it hold me like it used to do\nSomething in this music feels like you`,
+];
+
+function generateMetadata(prompt, genre, mood, bpm) {
+  const words = TITLE_WORDS[genre] || TITLE_WORDS['Electronic'];
+  const w1 = words[Math.floor(Math.random() * words.length)];
+  const w2 = TITLE_SUFFIX[Math.floor(Math.random() * TITLE_SUFFIX.length)];
+  const title = `${w1} ${w2}`;
+  const taglineArr = TAGLINES[mood] || TAGLINES['Melancholic'];
+  const tagline = taglineArr[Math.floor(Math.random() * taglineArr.length)];
+  const tags = [genre, mood, `${bpm} BPM`];
+  const template = LYRIC_TEMPLATES[Math.floor(Math.random() * LYRIC_TEMPLATES.length)];
+  const lyrics = template(prompt, genre, mood);
+  return { title, tagline, tags, lyrics };
+}
+
+function generateLyrics() {
+  const genre = document.getElementById('genreSelect').value;
+  const mood = document.getElementById('moodSelect').value;
+  const prompt = document.getElementById('promptInput').value || '';
+  const bpm = document.getElementById('bpmVal').textContent;
+  const meta = generateMetadata(prompt, genre, mood, bpm);
+  document.getElementById('lyricsInput').value = meta.lyrics;
+  showToast('Lyrics generated!', '✍️');
+}
+
+// ── DURATION MAP ──
+const DURATION_MAP = { '0:30': 8, '1:00': 15, '2:00': 22, '3:00': 30, '4:00': 30 };
+
+// ── MUSIC GENERATION ──
+// WORKER_URL is set by the user after deploying their Cloudflare Worker.
+// If empty, we fall back to direct HF calls (works on desktop, blocked on iOS Safari).
+let WORKER_URL = ''; // e.g. https://soundforge.yourname.workers.dev
+
+async function generateMusicHF(musicPrompt, durationSecs) {
+  const body = {
+    inputs: musicPrompt,
+    parameters: { max_new_tokens: Math.min(durationSecs * 50, 500) }
+  };
+
+  // ── Path A: Cloudflare Worker (works everywhere including iOS) ──
+  if (WORKER_URL) {
+    setStatus('Connecting to your proxy…', 57);
+    let res;
+    try {
+      res = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hfKey: HF_KEY, ...body })
+      });
+    } catch(e) {
+      throw new Error('Could not reach your Cloudflare Worker. Check the URL in Token setup.');
+    }
+
+    // Worker-side warm-up loop
+    let warmRetries = 0;
+    while (res.status === 503 && warmRetries < 3) {
+      warmRetries++;
+      setStatus(`Model warming up… (${warmRetries}/3)`, 60 + warmRetries * 8);
+      await new Promise(r => setTimeout(r, 18000));
+      if (cancelRequested) throw new Error('cancelled');
+      res = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hfKey: HF_KEY, ...body })
+      });
+    }
+
+    if (res.status === 401 || res.status === 403)
+      throw new Error('Invalid HF token — paste a fresh one from huggingface.co/settings/tokens');
+    if (res.status === 429)
+      throw new Error('Rate limited — wait 60 seconds and try again');
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { const j = await res.json(); msg = j.error || msg; } catch {}
+      throw new Error('Worker error: ' + msg);
+    }
+
+    const blob = await res.blob();
+    if (blob.size < 500) throw new Error('Empty audio — model may be loading. Try again in 30s.');
+    return URL.createObjectURL(blob);
+  }
+
+  // ── Path B: Direct HF call (desktop browsers only) ──
+  setStatus('Connecting to Hugging Face…', 57);
+  const ENDPOINTS = [
+    'https://router.huggingface.co/hf-inference/models/facebook/musicgen-small',
+    'https://api-inference.huggingface.co/models/facebook/musicgen-small',
+  ];
+
+  let lastError = 'Connection blocked by browser. Set up a Cloudflare Worker for mobile support.';
+
+  for (let ei = 0; ei < ENDPOINTS.length; ei++) {
+    if (cancelRequested) throw new Error('cancelled');
+    setStatus(`Trying endpoint ${ei + 1}/${ENDPOINTS.length}…`, 57 + ei * 8);
+    let res;
+    try {
+      res = await fetch(ENDPOINTS[ei], {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${HF_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } catch(e) {
+      lastError = ei === ENDPOINTS.length - 1
+        ? 'Blocked by browser CORS policy. You need to set up a Cloudflare Worker — tap Token to add the Worker URL.'
+        : `Endpoint ${ei + 1} blocked, trying next…`;
+      continue;
+    }
+
+    let warmRetries = 0;
+    while (res.status === 503 && warmRetries < 2) {
+      warmRetries++;
+      setStatus(`Model warming up… (${warmRetries}/2)`, 65);
+      await new Promise(r => setTimeout(r, 18000));
+      if (cancelRequested) throw new Error('cancelled');
+      try { res = await fetch(ENDPOINTS[ei], { method: 'POST', headers: { 'Authorization': `Bearer ${HF_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
+      catch(e) { break; }
+    }
+
+    if (res.status === 401 || res.status === 403)
+      throw new Error('Invalid HF token — paste a fresh one from huggingface.co/settings/tokens');
+    if (res.status === 429) throw new Error('Rate limited — wait 60 seconds');
+    if (res.status === 503) { lastError = 'Model loading — try again in 30s'; continue; }
+    if (!res.ok) { try { const j = await res.json(); lastError = j.error || `HTTP ${res.status}`; } catch { lastError = `HTTP ${res.status}`; } continue; }
+
+    const blob = await res.blob();
+    if (blob.size < 500) { lastError = 'Empty audio — try again'; continue; }
+    return URL.createObjectURL(blob);
+  }
+
+  throw new Error(lastError);
+}
+
+
+// ── MAIN GENERATION FLOW ──
+async function startGeneration() {
+  const prompt = document.getElementById('promptInput').value.trim();
+  if (!prompt) { showToast('Add a description first', '⚠️'); return; }
+
+  cancelRequested = false;
+  document.getElementById('generateBtn').disabled = true;
+  document.getElementById('genStatus').classList.add('visible');
+  document.getElementById('resultSection').classList.remove('visible');
+
+  const genre = document.getElementById('genreSelect').value;
+  const mood = document.getElementById('moodSelect').value;
+  const bpm = document.getElementById('bpmVal').textContent;
+  const durationSecs = DURATION_MAP[selectedDuration] || 8;
+  const isInstrumental = currentMode === 'instrumental';
+  const customLyrics = currentMode === 'custom' ? document.getElementById('lyricsInput').value.trim() : '';
+
+  // Generate metadata locally (instant, no API)
+  const meta = generateMetadata(prompt, genre, mood, bpm);
+  const songLyrics = customLyrics || meta.lyrics;
+
+  let audioUrl = null;
+
+  try {
+    markStep('step1', 'active');
+    setStatus('Crafting your prompt…', 15);
+    await new Promise(r => setTimeout(r, 500));
+    if (cancelRequested) throw new Error('cancelled');
+
+    markStep('step1', 'done'); markStep('step2', 'active');
+    setStatus('Composing structure…', 35);
+    await new Promise(r => setTimeout(r, 600));
+    if (cancelRequested) throw new Error('cancelled');
+
+    markStep('step2', 'done'); markStep('step3', 'active');
+    setStatus('Generating audio with MusicGen…', 55);
+
+    const musicPrompt = `${genre}, ${mood}, ${bpm} BPM. ${prompt}${isInstrumental ? ', no vocals, instrumental' : ''}`;
+
+    if (!demoMode && HF_KEY) {
+      audioUrl = await generateMusicHF(musicPrompt, durationSecs);
+    } else {
+      // Simulate for demo mode
+      for (let p = 55; p <= 88; p += 5) {
+        if (cancelRequested) throw new Error('cancelled');
+        await new Promise(r => setTimeout(r, 500));
+        document.getElementById('statusBar').style.width = p + '%';
+      }
+    }
+
+    if (cancelRequested) throw new Error('cancelled');
+
+    markStep('step3', 'done'); markStep('step4', 'active');
+    setStatus('Mastering…', 95);
+    await new Promise(r => setTimeout(r, 500));
+    markStep('step4', 'done');
+    setStatus('Done!', 100);
+    await new Promise(r => setTimeout(r, 300));
+
+  } catch (err) {
+    document.getElementById('genStatus').classList.remove('visible');
+    document.getElementById('generateBtn').disabled = false;
+    ['step1','step2','step3','step4'].forEach(id => markStep(id, null));
+    document.getElementById('statusBar').style.width = '0%';
+    if (err.message !== 'cancelled') {
+      showErrorBanner(err.message);
+    }
+    return;
+  }
+
+  document.getElementById('genStatus').classList.remove('visible');
+  document.getElementById('generateBtn').disabled = false;
+  ['step1','step2','step3','step4'].forEach(id => markStep(id, null));
+  document.getElementById('statusBar').style.width = '0%';
+
+  const emoji = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+  const gradient = GRADIENTS[Math.floor(Math.random() * GRADIENTS.length)];
+
+  const song = {
+    title: meta.title, tagline: meta.tagline, tags: meta.tags,
+    emoji, gradient, duration: selectedDuration,
+    genre, mood, bpm, lyrics: songLyrics, prompt, audioUrl,
+    isDemo: !audioUrl
+  };
+
+  songs.unshift(song);
+  currentSongIdx = 0;
+  renderResult(song);
+  renderSongsList();
+  updateNowPlayingAudio(song);
+  showToast(`"${meta.title}" created!`, '🎵');
+}
+
+function cancelGeneration() {
+  cancelRequested = true;
+  document.getElementById('genStatus').classList.remove('visible');
+  document.getElementById('generateBtn').disabled = false;
+  ['step1','step2','step3','step4'].forEach(id => markStep(id, null));
+  document.getElementById('statusBar').style.width = '0%';
+  showToast('Cancelled', '✕');
+}
+
+// ── RENDER RESULT ──
+function renderResult(song) {
+  document.getElementById('resultSection').classList.add('visible');
+  const bars = Array.from({length: 80}, () => Math.random() * 0.7 + 0.3);
+  const waveHtml = bars.map(h => `<div class="wave-bar" style="height:${h*70}%"></div>`).join('');
+
+  document.getElementById('resultCard').innerHTML = `
+    <div class="result-header">
+      <div class="result-art" style="background:${song.gradient}">${song.emoji}</div>
+      <div class="result-meta">
+        <div class="result-title">${song.title}</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px">${song.tagline}</div>
+        <div class="result-tags">
+          ${song.tags.map(t => `<div class="result-tag">${t}</div>`).join('')}
+          ${song.audioUrl
+            ? '<div class="result-tag" style="color:var(--neon);border-color:rgba(0,255,225,0.3)">🎵 REAL AUDIO</div>'
+            : '<div class="result-tag" style="color:var(--gold);border-color:rgba(255,209,102,0.3)">🎭 DEMO</div>'}
+        </div>
+      </div>
+      <div class="result-actions">
+        ${song.audioUrl
+          ? `<a class="action-btn" href="${song.audioUrl}" download="${song.title}.wav" style="text-decoration:none">
+               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+               Download
+             </a>`
+          : `<button class="action-btn" onclick="openApiModal()">
+               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+               Get Audio
+             </button>`}
+        <button class="action-btn primary" id="playResultBtn" onclick="playResultAudio('${song.audioUrl || ''}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          ${song.audioUrl ? 'Play' : 'Preview'}
+        </button>
+      </div>
+    </div>
+    <div class="waveform-player">
+      <audio id="resultAudio" ${song.audioUrl ? `src="${song.audioUrl}"` : ''} style="display:none"
+        onended="onAudioEnded()" ontimeupdate="syncWaveform()" onloadedmetadata="onAudioLoaded()"></audio>
+      <div class="wave-display" id="waveDisplay" onclick="seekWaveAudio(event)">${waveHtml}</div>
+      <div class="player-controls-row">
+        <button class="play-btn-main" id="wavePlayBtn" onclick="playResultAudio('${song.audioUrl || ''}')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+        <span class="time-display" id="audioTimeDisplay">0:00 / ${song.duration}</span>
+        <div class="vol-control">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
+          <input type="range" class="vol-slider" min="0" max="100" value="80" oninput="setAudioVolume(this.value)">
+        </div>
+        <button class="action-btn" style="margin-left:auto;font-size:12px;padding:6px 12px" onclick="openApiModal()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+          HF Token
+        </button>
+      </div>
+    </div>
+    ${song.lyrics ? `
+    <div class="lyrics-section">
+      <div class="lyrics-header">Lyrics</div>
+      <div class="lyrics-text">${song.lyrics}</div>
+    </div>` : ''}
+  `;
+
+  const varEmojis = ['🌊','🔥','❄️','💫'];
+  const varLabels = ['Acoustic','Remix','Ambient','Bass Boost'];
+  document.getElementById('variationsRow').innerHTML = varEmojis.map((e, i) => `
+    <div class="variation-card" onclick="showToast('Tweak the prompt and generate a new track!','💡')">
+      <div class="var-art" style="background:${GRADIENTS[(i+2)%GRADIENTS.length]}">${e}</div>
+      <div>
+        <div class="var-label">Variation ${i+1}</div>
+        <div class="var-name">${song.title} — ${varLabels[i]}</div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" style="margin-left:auto"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    </div>
+  `).join('');
+
+  setTimeout(() => document.querySelectorAll('.wave-bar').forEach((b,i) =>
+    setTimeout(() => { b.style.background='var(--dim)'; b.style.opacity='0.6'; }, i * 6)), 100);
+}
+
+// ── AUDIO PLAYER ──
+function playResultAudio(url) {
+  const audio = document.getElementById('resultAudio');
+  if (!audio) return;
+  if (!url) { showToast('Add your free HF token to generate real audio', '⚠️'); return; }
+  if (audio.paused) {
+    audio.play().then(() => { updatePlayBtns(true); updateNowPlayingAudio(songs[currentSongIdx]); })
+      .catch(e => showToast('Playback error: ' + e.message, '❌'));
+  } else {
+    audio.pause(); updatePlayBtns(false);
+  }
+}
+
+function updatePlayBtns(playing) {
+  const pi = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+  const pa = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+  const wb = document.getElementById('wavePlayBtn');
+  const rb = document.getElementById('playResultBtn');
+  if (wb) wb.innerHTML = playing ? pa : pi;
+  if (rb) rb.innerHTML = (playing ? pa : pi) + (playing ? ' Pause' : ' Play');
+  document.getElementById('gPlayIcon').style.display = playing ? 'none' : '';
+  document.getElementById('gPauseIcon').style.display = playing ? '' : 'none';
+  // sync mobile bottom nav play button
+  const mpi = document.getElementById('mobilePlayIcon');
+  const mpa = document.getElementById('mobilePauseIcon');
+  if (mpi) mpi.style.display = playing ? 'none' : '';
+  if (mpa) mpa.style.display = playing ? '' : 'none';
+  isPlaying = playing;
+}
+
+// ── MOBILE TAB SWITCHING ──
+function mobileSwitchTab(tab, btn) {
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const studio = document.getElementById('generator');
+  const mobileSongs = document.getElementById('mobileSongsSection');
+  if (tab === 'songs') {
+    if (studio) studio.style.display = 'none';
+    if (mobileSongs) { mobileSongs.style.display = 'block'; renderMobileSongs(); }
+  } else {
+    if (studio) studio.style.display = '';
+    if (mobileSongs) mobileSongs.style.display = 'none';
+  }
+}
+
+function renderMobileSongs() {
+  const el = document.getElementById('mobileSongsList');
+  if (!el) return;
+  if (songs.length === 0) {
+    el.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--muted);font-size:13px">
+      <div style="font-size:36px;margin-bottom:12px;opacity:0.4">🎵</div>
+      Generate a track in Studio first
+    </div>`;
+    return;
+  }
+  el.innerHTML = songs.map((s, i) => `
+    <div class="mobile-song-tile" onclick="selectSong(${i})">
+      <div class="st-art" style="background:${s.gradient}">${s.emoji}</div>
+      <div style="min-width:0">
+        <div class="st-title">${s.title}</div>
+        <div class="st-genre">${s.genre} ${s.audioUrl ? '🎵' : '🎭'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function onAudioEnded() { updatePlayBtns(false); }
+
+function onAudioLoaded() {
+  const audio = document.getElementById('resultAudio');
+  if (!audio) return;
+  const m = Math.floor(audio.duration/60), s = Math.floor(audio.duration%60);
+  const el = document.getElementById('audioTimeDisplay');
+  if (el) el.textContent = `0:00 / ${m}:${s.toString().padStart(2,'0')}`;
+}
+
+function syncWaveform() {
+  const audio = document.getElementById('resultAudio');
+  if (!audio || !audio.duration) return;
+  const ratio = audio.currentTime / audio.duration;
+  const bars = document.querySelectorAll('.wave-bar');
+  const split = Math.floor(ratio * bars.length);
+  bars.forEach((b, i) => { b.classList.toggle('played', i < split); b.classList.toggle('playing', i === split); });
+  const fmt = t => `${Math.floor(t/60)}:${Math.floor(t%60).toString().padStart(2,'0')}`;
+  const el = document.getElementById('audioTimeDisplay');
+  if (el) el.textContent = `${fmt(audio.currentTime)} / ${fmt(audio.duration)}`;
+}
+
+function seekWaveAudio(e) {
+  const audio = document.getElementById('resultAudio');
+  if (!audio || !audio.duration) return;
+  audio.currentTime = (e.offsetX / e.currentTarget.clientWidth) * audio.duration;
+  syncWaveform();
+}
+
+function setAudioVolume(val) {
+  const audio = document.getElementById('resultAudio');
+  if (audio) audio.volume = val / 100;
+}
+
+function toggleGlobalPlay() {
+  const audio = document.getElementById('resultAudio');
+  if (audio && audio.src && !audio.src.endsWith(window.location.href)) {
+    audio.paused ? audio.play().then(() => updatePlayBtns(true)) : (audio.pause(), updatePlayBtns(false));
+  } else {
+    showToast(songs.length ? 'Click Play on the track above' : 'Generate a track first', '⚠️');
+  }
+}
+
+// ── SONGS LIST ──
+function renderSongsList() {
+  const el = document.getElementById('songsList');
+  document.getElementById('songCount').textContent = songs.length + ' track' + (songs.length !== 1 ? 's' : '');
+  const mc = document.getElementById('mobileSongCount');
+  if (mc) mc.textContent = songs.length + ' track' + (songs.length !== 1 ? 's' : '');
+  el.innerHTML = songs.map((s, i) => `
+    <div class="song-card ${i === currentSongIdx ? 'active' : ''}" onclick="selectSong(${i})">
+      <div class="song-thumb" style="background:${s.gradient}">
+        ${s.emoji}
+        <div class="play-overlay"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+      </div>
+      <div class="song-meta">
+        <div class="song-title">${s.title}</div>
+        <div class="song-genre">${s.genre} ${s.audioUrl ? '🎵' : '🎭'}</div>
+      </div>
+      <div class="song-duration">${s.duration}</div>
+    </div>
+  `).join('');
+}
+
+function selectSong(i) {
+  currentSongIdx = i;
+  renderSongsList();
+  updateNowPlayingAudio(songs[i]);
+  showToast(songs[i].audioUrl ? `Now playing: ${songs[i].title}` : `${songs[i].title} — demo track`, songs[i].audioUrl ? '▶' : '🎭');
+}
+
+function updateNowPlayingAudio(song) {
+  document.getElementById('npArt').textContent = song.emoji;
+  document.getElementById('npArt').style.background = song.gradient;
+  document.getElementById('npTitle').textContent = song.title;
+  document.getElementById('npArtist').textContent = song.genre.toUpperCase() + ' · ' + song.mood;
+}
+
+function updateNowPlaying(song) { updateNowPlayingAudio(song); }
+
+// ══════════════════════════════════════════
+// MOBILE/DESKTOP BRIDGE + NEW FUNCTIONS
+// ══════════════════════════════════════════
+
+// Detect which layout is active
+function isMobile() { return window.innerWidth < 768; }
+
+// Modal
+function openApiModal() {
+  document.getElementById('apiModal').style.display = 'flex';
+}
+function saveApiKeys() {
+  const key = document.getElementById('hfKey').value.trim();
+  if (!key) { showToast('Paste your Hugging Face token first', '⚠️'); return; }
+  if (!key.startsWith('hf_')) { showToast('Token should start with hf_', '⚠️'); return; }
+  HF_KEY = key;
+  document.getElementById('apiModal').style.display = 'none';
+  showToast('Token saved — ready to forge! 🎛️', '✓');
+}
+function skipApiKeys() {
+  demoMode = true;
+  document.getElementById('apiModal').style.display = 'none';
+  showToast('Demo mode — audio simulated', '🎭');
+}
+
+// Mobile tab switching
+function switchMobileTab(tab) {
+  document.getElementById('tabStudio').classList.toggle('active', tab === 'studio');
+  document.getElementById('tabSongs').classList.toggle('active', tab === 'songs');
+  document.getElementById('panelStudio').classList.toggle('active', tab === 'studio');
+  document.getElementById('panelSongs').classList.toggle('active', tab === 'songs');
+  if (tab === 'songs') renderMobileSongsList();
+}
+
+// Mobile songs list
+function renderMobileSongsList() {
+  const el = document.getElementById('songsList');
+  if (songs.length === 0) {
+    el.innerHTML = `<div class="songs-empty"><div class="empty-icon">🎵</div>Generate your first song<br>in the Studio tab</div>`;
+    return;
+  }
+  el.innerHTML = `<div class="songs-grid">` + songs.map((s, i) => `
+    <div class="song-row ${i===currentSongIdx?'active':''}" onclick="selectSong(${i})">
+      <div class="song-art" style="background:${s.gradient}">${s.emoji}</div>
+      <div class="song-info">
+        <div class="song-name">${s.title}</div>
+        <div class="song-meta">${s.genre} ${s.audioUrl?'🎵':'🎭'}</div>
+      </div>
+      <div class="song-dur">${s.duration}</div>
+    </div>
+  `).join('') + `</div>`;
+}
+
+// Desktop songs list
+function renderDSongsList() {
+  const el = document.getElementById('dSongsList');
+  const cnt = document.getElementById('dSongCount');
+  if (cnt) cnt.textContent = songs.length + ' track' + (songs.length!==1?'s':'');
+  if (songs.length === 0) {
+    el.innerHTML = `<div style="padding:40px 20px;text-align:center;color:var(--muted);font-size:13px"><div style="font-size:32px;margin-bottom:12px;opacity:0.4">🎵</div>Generate your first<br>song to get started</div>`;
+    return;
+  }
+  el.innerHTML = songs.map((s, i) => `
+    <div class="d-song-card ${i===currentSongIdx?'active':''}" onclick="selectSong(${i})">
+      <div class="d-song-thumb" style="background:${s.gradient}">
+        ${s.emoji}
+        <div class="d-play-ov"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+      </div>
+      <div class="d-song-meta">
+        <div class="d-song-name">${s.title}</div>
+        <div class="d-song-genre">${s.genre} ${s.audioUrl?'🎵':'🎭'}</div>
+      </div>
+      <div class="d-song-dur">${s.duration}</div>
+    </div>
+  `).join('');
+}
+
+// Override renderSongsList to update both panels
+function renderSongsList() {
+  renderMobileSongsList();
+  renderDSongsList();
+}
+
+// Override selectSong
+function selectSong(i) {
+  currentSongIdx = i;
+  renderSongsList();
+  updateNowPlayingAll(songs[i]);
+  showToast(songs[i].audioUrl ? `Now playing: ${songs[i].title}` : `${songs[i].title} — demo`, songs[i].audioUrl ? '▶' : '🎭');
+}
+
+// Update all now-playing displays
+function updateNowPlayingAll(song) {
+  // Desktop
+  const da = document.getElementById('dNpArt');
+  const dt = document.getElementById('dNpTitle');
+  const ds = document.getElementById('dNpArtist');
+  if (da) { da.textContent = song.emoji; da.style.background = song.gradient; }
+  if (dt) dt.textContent = song.title;
+  if (ds) ds.textContent = song.genre.toUpperCase() + ' · ' + song.mood;
+  // Mobile mini player
+  const ma = document.getElementById('miniArt');
+  const mt = document.getElementById('miniTitle');
+  const ms = document.getElementById('miniSub');
+  const mp = document.getElementById('miniPlayer');
+  if (ma) { ma.textContent = song.emoji; ma.style.background = song.gradient; }
+  if (mt) mt.textContent = song.title;
+  if (ms) ms.textContent = song.genre.toUpperCase() + ' · ' + song.mood;
+  if (mp) mp.style.display = '';
+}
+function updateNowPlayingAudio(song) { updateNowPlayingAll(song); }
+function updateNowPlaying(song) { updateNowPlayingAll(song); }
+
+// Override updatePlayBtns to sync all play icons
+const _origUpdatePlayBtns = updatePlayBtns;
+function updatePlayBtns(playing) {
+  // Desktop player
+  const gpi = document.getElementById('gPlayIcon');
+  const gpa = document.getElementById('gPauseIcon');
+  if (gpi) gpi.style.display = playing ? 'none' : '';
+  if (gpa) gpa.style.display = playing ? '' : 'none';
+  // Mobile mini player
+  const mpi = document.getElementById('mGPlayIcon');
+  const mpa = document.getElementById('mGPauseIcon');
+  if (mpi) mpi.style.display = playing ? 'none' : '';
+  if (mpa) mpa.style.display = playing ? '' : 'none';
+  // Wave buttons
+  const wb = document.getElementById('wavePlayBtn') || document.getElementById('dWavePlayBtn');
+  const rb = document.getElementById('playResultBtn') || document.getElementById('dPlayResultBtn');
+  const pi = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+  const pa = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+  if (wb) wb.innerHTML = playing ? pa : pi;
+  if (rb) rb.innerHTML = (playing?pa:pi)+(playing?' Pause':' Play');
+  isPlaying = playing;
+}
+
+// Mobile/Desktop mode selector bridge (both share same currentMode)
+function setMode(mode, btn) {
+  currentMode = mode;
+  // All mode tabs in both layouts
+  document.querySelectorAll('.mode-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // Show/hide lyrics panel in both layouts
+  const lp = document.getElementById('lyricsPanel');
+  const dlp = document.getElementById('dLyricsPanel');
+  if (lp) lp.style.display = mode === 'custom' ? 'block' : 'none';
+  if (dlp) dlp.style.display = mode === 'custom' ? 'block' : 'none';
+}
+
+// Duration bridge — shares selectedDuration
+function setDuration(btn, dur) {
+  selectedDuration = dur;
+  document.querySelectorAll('.tag-pill').forEach(p => {
+    if (['0:30','1:00','2:00','3:00','4:00'].includes(p.textContent.trim())) p.classList.remove('selected');
+  });
+  btn.classList.add('selected');
+}
+function setDurationD(btn, dur) { setDuration(btn, dur); }
+
+function updateCharCount() {
+  const v = document.getElementById('promptInput') ? document.getElementById('promptInput').value.length : 0;
+  const el = document.getElementById('charCount');
+  if (el) el.textContent = v + '/500';
+}
+function updateCharCountD() {
+  const v = document.getElementById('dPromptInput') ? document.getElementById('dPromptInput').value.length : 0;
+  const el = document.getElementById('dCharCount');
+  if (el) el.textContent = v + '/500';
+}
+
+function addTag(btn, tag) {
+  btn.classList.toggle('selected');
+  const input = document.getElementById('promptInput');
+  if (!input) return;
+  input.value = btn.classList.contains('selected')
+    ? (input.value + ' ' + tag).trim()
+    : input.value.replace(new RegExp('\\b' + tag + '\\b', 'g'), '').replace(/\s+/g,' ').trim();
+  updateCharCount();
+}
+function addTagD(btn, tag) {
+  btn.classList.toggle('selected');
+  const input = document.getElementById('dPromptInput');
+  if (!input) return;
+  input.value = btn.classList.contains('selected')
+    ? (input.value + ' ' + tag).trim()
+    : input.value.replace(new RegExp('\\b' + tag + '\\b', 'g'), '').replace(/\s+/g,' ').trim();
+  updateCharCountD();
+}
+
+// Lyrics generation for both layouts
+function generateLyrics() {
+  const genre = document.getElementById('genreSelect').value;
+  const mood = document.getElementById('moodSelect').value;
+  const bpm = document.getElementById('bpmVal').textContent;
+  const meta = generateMetadata('', genre, mood, bpm);
+  const el = document.getElementById('lyricsInput');
+  if (el) el.value = meta.lyrics;
+  showToast('Lyrics generated!', '✍️');
+}
+function generateLyricsD() {
+  const genre = document.getElementById('dGenreSelect').value;
+  const mood = document.getElementById('dMoodSelect').value;
+  const bpm = document.getElementById('dBpmVal').textContent;
+  const meta = generateMetadata('', genre, mood, bpm);
+  const el = document.getElementById('dLyricsInput');
+  if (el) el.value = meta.lyrics;
+  showToast('Lyrics generated!', '✍️');
+}
+
+// ── STATUS helpers (shared by mobile + desktop) ──
+function setStatus(label, progress) {
+  ['statusTitle','dStatusTitle'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = label + ' <div class="dot-loader" style="display:inline-flex"><span></span><span></span><span></span></div>';
+  });
+  ['statusBar','dStatusBar'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.width = progress + '%';
+  });
+}
+function markStep(id, state) {
+  // mobile: step1-4, desktop: dStep1-4
+  [id, 'd' + id.charAt(0).toUpperCase() + id.slice(1)].forEach(sid => {
+    const el = document.getElementById(sid);
+    if (el) { el.classList.remove('done','active'); if (state) el.classList.add(state); }
+  });
+}
+
+// ── GENERATION STARTERS ──
+function getActiveInputs() {
+  if (isMobile()) {
+    return {
+      prompt: (document.getElementById('promptInput')||{value:''}).value.trim(),
+      genre: (document.getElementById('genreSelect')||{value:'Electronic'}).value,
+      mood: (document.getElementById('moodSelect')||{value:'Melancholic'}).value,
+      bpm: (document.getElementById('bpmVal')||{textContent:'88'}).textContent,
+      lyrics: (document.getElementById('lyricsInput')||{value:''}).value.trim(),
+    };
+  } else {
+    return {
+      prompt: (document.getElementById('dPromptInput')||{value:''}).value.trim(),
+      genre: (document.getElementById('dGenreSelect')||{value:'Electronic'}).value,
+      mood: (document.getElementById('dMoodSelect')||{value:'Melancholic'}).value,
+      bpm: (document.getElementById('dBpmVal')||{textContent:'88'}).textContent,
+      lyrics: (document.getElementById('dLyricsInput')||{value:''}).value.trim(),
+    };
+  }
+}
+function getGenBtn() { return isMobile() ? document.getElementById('generateBtn') : document.getElementById('dGenerateBtn'); }
+function getStatusEl() { return isMobile() ? document.getElementById('genStatus') : document.getElementById('dGenStatus'); }
+function getResultSection() { return isMobile() ? document.getElementById('resultSection') : document.getElementById('dResultSection'); }
+function getResultCard() { return isMobile() ? document.getElementById('resultCard') : document.getElementById('dResultCard'); }
+function getVarsRow() { return isMobile() ? document.getElementById('variationsRow') : document.getElementById('dVariationsRow'); }
+
+// Override startGeneration to use active inputs
+async function startGeneration() { await _startGen(); }
+async function startGenerationD() { await _startGen(); }
+
+async function _startGen() {
+  const inputs = getActiveInputs();
+  if (!inputs.prompt) { showToast('Add a description first', '⚠️'); return; }
+
+  cancelRequested = false;
+  const genBtn = getGenBtn();
+  const statusEl = getStatusEl();
+  const resultEl = getResultSection();
+  if (genBtn) genBtn.disabled = true;
+  if (statusEl) statusEl.classList.add('visible');
+  if (resultEl) resultEl.classList.remove('visible');
+
+  const { prompt, genre, mood, bpm, lyrics: customLyrics } = inputs;
+  const durationSecs = DURATION_MAP[selectedDuration] || 8;
+  const isInstrumental = currentMode === 'instrumental';
+  const meta = generateMetadata(prompt, genre, mood, bpm);
+  const songLyrics = customLyrics || meta.lyrics;
+  let audioUrl = null;
+
+  try {
+    markStep('step1', 'active');
+    setStatus('Crafting your prompt…', 15);
+    await new Promise(r => setTimeout(r, 500));
+    if (cancelRequested) throw new Error('cancelled');
+
+    markStep('step1', 'done'); markStep('step2', 'active');
+    setStatus('Composing structure…', 35);
+    await new Promise(r => setTimeout(r, 600));
+    if (cancelRequested) throw new Error('cancelled');
+
+    markStep('step2', 'done'); markStep('step3', 'active');
+    setStatus('Generating audio with MusicGen…', 55);
+
+    const musicPrompt = `${genre}, ${mood}, ${bpm} BPM. ${prompt}${isInstrumental?', no vocals, instrumental':''}`;
+
+    if (!demoMode && HF_KEY) {
+      audioUrl = await generateMusicHF(musicPrompt, durationSecs);
+    } else {
+      for (let p = 55; p <= 88; p += 5) {
+        if (cancelRequested) throw new Error('cancelled');
+        await new Promise(r => setTimeout(r, 500));
+        setStatus('Generating audio with MusicGen…', p);
+      }
+    }
+
+    if (cancelRequested) throw new Error('cancelled');
+    markStep('step3', 'done'); markStep('step4', 'active');
+    setStatus('Mastering…', 95);
+    await new Promise(r => setTimeout(r, 500));
+    markStep('step4', 'done');
+    setStatus('Done!', 100);
+    await new Promise(r => setTimeout(r, 300));
+
+  } catch (err) {
+    if (statusEl) statusEl.classList.remove('visible');
+    if (genBtn) genBtn.disabled = false;
+    ['step1','step2','step3','step4'].forEach(id => markStep(id, null));
+    setStatus('', 0);
+    if (err.message !== 'cancelled') showToast('Error: ' + err.message, '❌');
+    return;
+  }
+
+  if (statusEl) statusEl.classList.remove('visible');
+  if (genBtn) genBtn.disabled = false;
+  ['step1','step2','step3','step4'].forEach(id => markStep(id, null));
+  setStatus('', 0);
+
+  const emoji = EMOJIS[Math.floor(Math.random()*EMOJIS.length)];
+  const gradient = GRADIENTS[Math.floor(Math.random()*GRADIENTS.length)];
+  const song = { title: meta.title, tagline: meta.tagline, tags: meta.tags, emoji, gradient, duration: selectedDuration, genre, mood, bpm, lyrics: songLyrics, prompt, audioUrl, isDemo: !audioUrl };
+
+  songs.unshift(song);
+  currentSongIdx = 0;
+  renderResult(song);
+  renderSongsList();
+  updateNowPlayingAll(song);
+  showToast(`"${meta.title}" created!`, '🎵');
+}
+
+function cancelGeneration() { _cancelGen(); }
+function cancelGenerationD() { _cancelGen(); }
+function _cancelGen() {
+  cancelRequested = true;
+  const statusEl = getStatusEl();
+  const genBtn = getGenBtn();
+  if (statusEl) statusEl.classList.remove('visible');
+  if (genBtn) genBtn.disabled = false;
+  ['step1','step2','step3','step4'].forEach(id => markStep(id, null));
+  setStatus('', 0);
+  showToast('Cancelled', '✕');
+}
+
+// ── RENDER RESULT (works for both layouts) ──
+function renderResult(song) {
+  const resultEl = getResultSection();
+  const cardEl = getResultCard();
+  const varsEl = getVarsRow();
+  if (!resultEl || !cardEl) return;
+  resultEl.classList.add('visible');
+
+  const bars = Array.from({length:80}, () => Math.random()*0.7+0.3);
+  const waveHtml = bars.map(h => `<div class="wave-bar" style="height:${h*100}%"></div>`).join('');
+  const audioId = isMobile() ? 'resultAudio' : 'dResultAudio';
+  const wavePlayId = isMobile() ? 'wavePlayBtn' : 'dWavePlayBtn';
+  const playResultId = isMobile() ? 'playResultBtn' : 'dPlayResultBtn';
+  const timeId = isMobile() ? 'audioTimeDisplay' : 'dAudioTimeDisplay';
+  const waveId = isMobile() ? 'waveDisplay' : 'dWaveDisplay';
+
+  cardEl.innerHTML = `
+    <div class="result-top">
+      <div class="result-art" style="background:${song.gradient}">${song.emoji}</div>
+      <div class="result-info">
+        <div class="result-title">${song.title}</div>
+        <div class="result-tagline">${song.tagline}</div>
+        <div class="result-tags">
+          ${song.tags.map(t=>`<div class="result-tag">${t}</div>`).join('')}
+          ${song.audioUrl ? '<div class="result-tag" style="color:var(--neon);border-color:rgba(0,255,225,0.3)">🎵 REAL AUDIO</div>' : '<div class="result-tag" style="color:var(--gold)">🎭 DEMO</div>'}
+        </div>
+      </div>
+    </div>
+    <div class="result-btns">
+      ${song.audioUrl
+        ? `<a class="rbtn" href="${song.audioUrl}" download="${song.title}.wav">
+             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+             Download
+           </a>`
+        : `<button class="rbtn" onclick="openApiModal()">
+             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+             Get Audio
+           </button>`}
+      <button class="rbtn primary" id="${playResultId}" onclick="playResultAudio('${song.audioUrl||''}')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        ${song.audioUrl ? 'Play' : 'Preview'}
+      </button>
+    </div>
+    <div class="waveform-section">
+      <audio id="${audioId}" ${song.audioUrl?`src="${song.audioUrl}"`:''}  style="display:none"
+        onended="onAudioEnded()" ontimeupdate="syncWaveform()" onloadedmetadata="onAudioLoaded()"></audio>
+      <div class="wave-display" id="${waveId}" onclick="seekWaveAudio(event)">${waveHtml}</div>
+      <div class="wave-controls">
+        <button class="wave-play-btn" id="${wavePlayId}" onclick="playResultAudio('${song.audioUrl||''}')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+        <span class="time-disp" id="${timeId}">0:00 / ${song.duration}</span>
+        <div class="vol-row">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
+          <input type="range" class="vol-slider" min="0" max="100" value="80" oninput="setAudioVolume(this.value)">
+        </div>
+      </div>
+    </div>
+    ${song.lyrics ? `<div class="lyrics-display"><div class="lyrics-hdr">Lyrics</div><div class="lyrics-body">${song.lyrics}</div></div>` : ''}
+  `;
+
+  if (varsEl) {
+    const ve = ['🌊','🔥','❄️','💫'];
+    const vl = ['Acoustic','Remix','Ambient','Bass Boost'];
+    varsEl.innerHTML = ve.map((e,i) => `
+      <div class="var-card" onclick="showToast('Tweak your prompt to create a variation!','💡')">
+        <div class="var-art" style="background:${GRADIENTS[(i+2)%GRADIENTS.length]}">${e}</div>
+        <div><div class="var-lbl">Variation ${i+1}</div><div class="var-name">${song.title} — ${vl[i]}</div></div>
+      </div>
+    `).join('');
+  }
+
+  setTimeout(() => document.querySelectorAll('.wave-bar').forEach((b,i) =>
+    setTimeout(() => { b.style.background='var(--dim)'; b.style.opacity='0.6'; }, i*6)), 100);
+}
+
+// ── AUDIO PLAYER ──
+function getAudioEl() {
+  return document.getElementById('resultAudio') || document.getElementById('dResultAudio');
+}
+function playResultAudio(url) {
+  const audio = getAudioEl();
+  if (!audio) return;
+  if (!url) { showToast('Add your free HF token to generate real audio', '⚠️'); return; }
+  if (audio.paused) {
+    audio.play().then(() => { updatePlayBtns(true); if(songs[currentSongIdx]) updateNowPlayingAll(songs[currentSongIdx]); })
+      .catch(e => showToast('Playback error: ' + e.message, '❌'));
+  } else {
+    audio.pause(); updatePlayBtns(false);
+  }
+}
+function toggleGlobalPlay() {
+  const audio = getAudioEl();
+  if (audio && audio.src && !audio.src.endsWith(window.location.href)) {
+    audio.paused ? audio.play().then(()=>updatePlayBtns(true)) : (audio.pause(), updatePlayBtns(false));
+  } else {
+    showToast(songs.length ? 'Generate a track first' : 'Generate a track first', '⚠️');
+  }
+}
+function onAudioEnded() { updatePlayBtns(false); }
+function onAudioLoaded() {
+  const audio = getAudioEl();
+  if (!audio) return;
+  const m=Math.floor(audio.duration/60), s=Math.floor(audio.duration%60);
+  ['audioTimeDisplay','dAudioTimeDisplay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = `0:00 / ${m}:${s.toString().padStart(2,'0')}`;
+  });
+}
+function syncWaveform() {
+  const audio = getAudioEl();
+  if (!audio||!audio.duration) return;
+  const ratio = audio.currentTime/audio.duration;
+  const bars = document.querySelectorAll('.wave-bar');
+  const split = Math.floor(ratio*bars.length);
+  bars.forEach((b,i) => { b.classList.toggle('played',i<split); b.classList.toggle('playing',i===split); });
+  const fmt = t => `${Math.floor(t/60)}:${Math.floor(t%60).toString().padStart(2,'0')}`;
+  ['audioTimeDisplay','dAudioTimeDisplay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = `${fmt(audio.currentTime)} / ${fmt(audio.duration)}`;
+  });
+}
+function seekWaveAudio(e) {
+  const audio = getAudioEl();
+  if (!audio||!audio.duration) return;
+  audio.currentTime = (e.offsetX/e.currentTarget.clientWidth)*audio.duration;
+  syncWaveform();
+}
+function setAudioVolume(val) {
+  const audio = getAudioEl();
+  if (audio) audio.volume = val/100;
+}
+
+// Show modal on load
+window.addEventListener('load', () => {
+  document.getElementById('apiModal').style.display = 'flex';
+});
+</script>
+
+</body>
+</html>
