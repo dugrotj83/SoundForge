@@ -1,2 +1,0 @@
-# SoundForge
-Music Generation Application
