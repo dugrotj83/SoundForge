@@ -552,6 +552,8 @@ function setStep(id,st){const el=document.getElementById(id);if(!el)return;el.cl
 function setProg(txt,pct){const t=document.getElementById('sTxt'),b=document.getElementById('sBar');if(t)t.textContent=txt;if(b)b.style.width=pct+'%'}
 function clrProg(){document.getElementById('genStatus').classList.remove('show');document.getElementById('forgeBtn').disabled=false;['ss1','ss2','ss3','ss4'].forEach(id=>setStep(id,null));setProg('',0)}
 function showErr(msg){
+  // Friendlier message for network errors
+  if(msg==='Failed to fetch')msg='Could not reach Replicate servers. Make sure you are connected to the internet and your key starts with r8_. Also check replicate.com/account/billing — new accounts need prepaid credit added.';
   const old=document.getElementById('errB');if(old)old.remove();
   const d=document.createElement('div');d.id='errB';d.className='err-banner';
   d.innerHTML=`<div style="font-size:18px;flex-shrink:0">⚠️</div><div class="err-body"><div class="err-title">Generation failed</div><div class="err-msg">${msg}</div><div class="err-tip">💡 Check your key at <strong>replicate.com/account/api-tokens</strong>. Must start with <strong>r8_</strong>. Add billing at replicate.com/account/billing — free credits available on sign-up.</div></div><button class="err-x" onclick="this.parentElement.remove()">×</button>`;
@@ -581,13 +583,13 @@ async function callReplicate(prompt,secs){
   setProg('Sending to Replicate…',52);
   const r=await fetch('https://api.replicate.com/v1/models/meta/musicgen/predictions',{
     method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':`Token ${REP_KEY}`,'Prefer':'wait=20'},
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${REP_KEY}`,'Prefer':'wait=20'},
     body:JSON.stringify({input:{prompt,model_version:'stereo-large',duration:secs,output_format:'mp3',normalization_strategy:'loudness'}})
   });
   if(!r.ok){
     const e=await r.json().catch(()=>({}));
     if(r.status===401)throw new Error('Invalid API key — get a fresh one at replicate.com/account/api-tokens');
-    if(r.status===402)throw new Error('Billing required — add a card at replicate.com/account/billing (free credits included on sign-up)');
+    if(r.status===402)throw new Error('Prepaid credit needed — go to replicate.com/account/billing and add $5 credit (new accounts require this). You get free credits when you first sign up.');
     throw new Error(`Replicate error ${r.status}: ${e.detail||e.error||''}`);
   }
   const pred=await r.json();
@@ -598,7 +600,7 @@ async function callReplicate(prompt,secs){
     if(cancelFlag)throw new Error('cancelled');
     await new Promise(r=>setTimeout(r,2000));tries++;
     document.getElementById('sBar').style.width=Math.min(55+(tries/90)*36,92)+'%';
-    const p=await(await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`,{headers:{'Authorization':`Token ${REP_KEY}`}})).json();
+    const p=await(await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`,{headers:{'Authorization':`Bearer ${REP_KEY}`}})).json();
     if(p.status==='succeeded'){const u=Array.isArray(p.output)?p.output[0]:p.output;if(!u)throw new Error('No audio URL in response');return u}
     if(p.status==='failed')throw new Error('Generation failed: '+(p.error||'unknown'));
   }
